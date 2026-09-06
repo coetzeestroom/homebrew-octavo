@@ -9,7 +9,7 @@ Formula/
 ├── oh-my-zsh.rb    # ohmyzsh/ohmyzsh — untagged, pinned commit
 ├── oh-my-bash.rb   # ohmybash/oh-my-bash — untagged, pinned commit
 ├── oh-my-fish.rb   # oh-my-fish/oh-my-fish — tagged releases (v8+)
-└── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), systemd wrapper
+└── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
 ```
 
 ## Essential commands
@@ -48,7 +48,7 @@ end
 
 Shell frameworks use `libexec.install Dir["*"]` — never `prefix.install` or `bin.install`. The frameworks are sourced by the user's shell, not symlinked into PATH.
 
-**`hermes-dashboard` is an exception**: it generates a systemd unit file at `#{prefix}/lib/systemd/user/hermes-dashboard.service` rather than downloading and installing source code. The `url` is a formality pointing to the upstream webui repo.
+**`hermes-dashboard` is an exception**: it uses the `service` block to define a `brew services`-managed process (generates a launchd plist on macOS, a systemd unit on Linux) rather than downloading and installing source code. The `url` is a formality pointing to the upstream hermes-agent repo.
 
 ### Caveats pattern
 
@@ -58,7 +58,7 @@ Shell framework formulae have a `caveats` block that tells the user:
 3. How to disable the framework's built-in auto-updater (since Homebrew manages updates).
 4. Where runtime data goes (read-only Cellar workaround).
 
-**`hermes-dashboard`**: caveats show `systemctl --user` commands to enable/start the service.
+**`hermes-dashboard`**: caveats show `brew services start/stop/restart` commands.
 
 ## Convention: pin commit hashes with `git-synced`
 
@@ -73,7 +73,8 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`brew trust` needed on brew 6+**: `brew tap coetzeer/homebrew-octavo` must be followed by `brew trust coetzeer/octavo` once, or installs will be refused.
 - **Commit messages use a specific format**: Untagged formula updates use `"Update <formula> to <abbreviated commit> (<date>)"` e.g. `"Update oh-my-zsh to commit 8a5b3930 (2026-09-06)"`.
 - **`hermes-dashboard` depends on `hermes-agent`**: The `depends_on "hermes-agent"` line requires `hermes-agent` to exist as a formula in the same tap or another tapped repository. If it's not yet added, `brew install hermes-dashboard` will fail with a "no available formula" error — the dependency is declared preemptively.
-- **`hermes-dashboard` uses `%h` in the systemd unit**: The service file uses `%h` (systemd specifier for user home directory) so the paths work for any user. This only works when the unit is installed as a user service (`#{prefix}/lib/systemd/user/`).
+- **`hermes-dashboard` uses `service` block**: The `brew services` system generates a launchd plist on macOS and a systemd unit on Linux. The `environment_variables` and `run` paths use `Dir.home` evaluated at formula load time, so the service file is baked with the full absolute path for the user running `brew services start`.
+- **`hermes-dashboard` uses `std_service_path_env`**: The PATH includes Homebrew's standard service path via `std_service_path_env` helper, prepended with the hermes-agent venv and node binary paths.
 
 ## CI/CD
 
