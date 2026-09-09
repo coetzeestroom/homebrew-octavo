@@ -1,9 +1,9 @@
 class OhMyZsh < Formula
   desc "Community-driven framework for managing your zsh configuration"
   homepage "https://github.com/ohmyzsh/ohmyzsh"
-  url "https://github.com/ohmyzsh/ohmyzsh/archive/8d10cc948887e3cff29923d758999afa6edf87fb.tar.gz"
-  version "2026-09-07"
-  sha256 "582acac3ad272e7b9b70f60934b6bce0257de47ed4dea44b323bda2d30f9f026"
+  url "https://github.com/ohmyzsh/ohmyzsh/archive/129de5a05f9f234a3202fa5c8a13e15891149adc.tar.gz"
+  version "2026-09-09"
+  sha256 "12cde717bf61d29358348513ad7f01bdb9f8e7fd98b712e39743d25aa67a0e77"
   license "MIT"
   head "https://github.com/ohmyzsh/ohmyzsh.git", branch: "master"
 
