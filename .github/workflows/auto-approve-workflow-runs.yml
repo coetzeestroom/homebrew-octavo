@@ -1,6 +1,7 @@
 name: Auto Approve Workflow Runs
 
 on:
+  workflow_dispatch:
   schedule:
     # Check for workflow runs awaiting approval every 10 minutes.
     - cron: "*/10 * * * *"
