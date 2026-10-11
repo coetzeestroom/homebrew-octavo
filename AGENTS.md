@@ -77,6 +77,7 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`hermes-dashboard` uses `service` block**: The `brew services` system generates a launchd plist on macOS and a systemd unit on Linux. The `environment_variables` and `run` paths use `Dir.home` evaluated at formula load time, so the service file is baked with the full absolute path for the user running `brew services start`.
 - **`hermes-dashboard` uses `std_service_path_env`**: The PATH includes Homebrew's standard service path via `std_service_path_env` helper, prepended with the hermes-agent venv and node binary paths.
 - **`ccr-service` depends on homebrew-core's `claude-code-router`**: The wrapper adds only the `service` block; the dependency installs the `ccr` npm CLI (requires `node`). The service runs `ccr serve --no-open` in the foreground (management UI on port 3458, model gateway on port 3456). `ccr start` must NOT be used in the service block — it daemonizes and would exit, causing a restart loop under `keep_alive`.
+- **Wrapper formulae need a real file in the keg**: Brew's empty-installation check ignores `INSTALL_RECEIPT.json`, so writing that file does not prevent "Empty installation" failures in `brew test-bot`. `hermes-dashboard` and `ccr-service` install a `libexec/SERVICE_WRAPPER` marker instead.
 
 ## CI/CD
 

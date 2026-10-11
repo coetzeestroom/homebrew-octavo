@@ -10,8 +10,12 @@ class CcrService < Formula
 
   def install
     # Wrapper formula — the service definition is what matters.
-    # Install a marker so the keg is not empty.
-    (prefix/"INSTALL_RECEIPT.json").write "{}"
+    # Brew's empty-installation check ignores INSTALL_RECEIPT.json, so
+    # install a real marker file into libexec.
+    (libexec/"SERVICE_WRAPPER").write <<~EOS
+      ccr-service is a service wrapper for claude-code-router.
+      Run `brew services start ccr-service` to start the router.
+    EOS
   end
 
   service do
@@ -45,7 +49,7 @@ class CcrService < Formula
   end
 
   test do
-    assert_path_exists prefix/"INSTALL_RECEIPT.json"
+    assert_path_exists libexec/"SERVICE_WRAPPER"
     assert_path_exists "#{HOMEBREW_PREFIX}/opt/claude-code-router/bin/ccr"
   end
 end

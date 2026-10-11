@@ -10,8 +10,12 @@ class HermesDashboard < Formula
 
   def install
     # Wrapper formula — the service definition is what matters.
-    # Install a marker so the keg is not empty.
-    (prefix/"INSTALL_RECEIPT.json").write "{}"
+    # Brew's empty-installation check ignores INSTALL_RECEIPT.json, so
+    # install a real marker file into libexec.
+    (libexec/"SERVICE_WRAPPER").write <<~EOS
+      hermes-dashboard is a service wrapper for the Hermes Agent dashboard.
+      Run `brew services start hermes-dashboard` to start the dashboard.
+    EOS
   end
 
   service do
@@ -48,6 +52,6 @@ class HermesDashboard < Formula
   end
 
   test do
-    assert_path_exists prefix/"INSTALL_RECEIPT.json"
+    assert_path_exists libexec/"SERVICE_WRAPPER"
   end
 end
