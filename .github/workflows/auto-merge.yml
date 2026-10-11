@@ -1,14 +1,9 @@
 name: Auto Merge PRs
 
 on:
-  pull_request:
-    types:
-      - opened
-      - synchronize
-      - labeled
-  check_suite:
-    types:
-      - completed
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 jobs:
   automerge:
@@ -23,3 +18,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.BREW_PAT }}
           MERGE_LABELS: ""
           MERGE_METHOD: "squash"
+          MERGE_READY_STATE: "clean"
