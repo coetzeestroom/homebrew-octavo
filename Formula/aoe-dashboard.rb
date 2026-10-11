@@ -9,8 +9,8 @@ class AoeDashboard < Formula
 
   def install
     # Wrapper formula — the service definition is what matters.
-    # Install a marker so the keg is not empty.
-    (prefix/"INSTALL_RECEIPT.json").write "{}"
+    # Install upstream documentation so the keg is not empty.
+    pkgshare.install "README.md"
   end
 
   service do
@@ -37,6 +37,6 @@ class AoeDashboard < Formula
   end
 
   test do
-    assert_path_exists prefix/"INSTALL_RECEIPT.json"
+    assert_path_exists pkgshare/"README.md"
   end
 end
