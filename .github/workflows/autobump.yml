@@ -51,10 +51,110 @@ jobs:
           done < <(gh api --paginate \
             "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/bump-" --jq '.[].ref')
 
-      - name: Bump formulae
+      # These formulae have tagged releases that `brew bump` can discover and
+      # translate directly into new archive URLs.
+      - name: Bump tagged formulae
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
-        run: brew bump --no-fork --open-pr --formulae --bump-synced --tap="$TAP_NAME"
+        run: |
+          brew bump --no-fork --open-pr --formulae --bump-synced \
+            "$TAP_NAME/aoe-dashboard" \
+            "$TAP_NAME/ccr-service" \
+            "$TAP_NAME/hermes-dashboard" \
+            "$TAP_NAME/oh-my-fish"
+
+  # Untagged projects need both a commit SHA for the URL and a timestamp for
+  # the formula version, so update them separately from regular livecheck.
+  commit-pinned-autobump:
+    needs: autobump
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        include:
+          - formula: oh-my-zsh
+            repository: ohmyzsh/ohmyzsh
+            branch: master
+          - formula: oh-my-bash
+            repository: ohmybash/oh-my-bash
+            branch: master
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
+
+      - name: Set up git
+        id: git_setup
+        uses: Homebrew/actions/git-user-config@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
+
+      - name: Bump ${{ matrix.formula }} to the latest commit
+        env:
+          FORMULA: ${{ matrix.formula }}
+          GH_TOKEN: ${{ github.token }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
+          UPSTREAM_BRANCH: ${{ matrix.branch }}
+          UPSTREAM_REPOSITORY: ${{ matrix.repository }}
+        run: |
+          formula_file="Formula/$FORMULA.rb"
+          current_commit="$(sed -nE \
+            's|.*archive/([0-9a-f]{40})\.tar\.gz.*|\1|p' "$formula_file")"
+
+          if [[ ! "$current_commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Unable to find the pinned commit in $formula_file" >&2
+            exit 1
+          fi
+
+          IFS=$'\t' read -r latest_commit commit_date < <(
+            gh api "repos/$UPSTREAM_REPOSITORY/commits/$UPSTREAM_BRANCH" \
+              --jq '[.sha, .commit.committer.date] | @tsv'
+          )
+
+          if [[ ! "$latest_commit" =~ ^[0-9a-f]{40}$ || -z "$commit_date" ]]; then
+            echo "Unable to resolve $UPSTREAM_REPOSITORY@$UPSTREAM_BRANCH" >&2
+            exit 1
+          fi
+
+          if [[ "$latest_commit" == "$current_commit" ]]; then
+            echo "$FORMULA is already pinned to $latest_commit"
+            exit 0
+          fi
+
+          version="$(date --utc --date="$commit_date" +%Y.%m.%d.%H%M%S)"
+          commit_day="$(date --utc --date="$commit_date" +%F)"
+          archive_url="https://github.com/$UPSTREAM_REPOSITORY/archive/$latest_commit.tar.gz"
+          branch="bump-$FORMULA-$version"
+
+          if [[ "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" \
+            --state open --json number --limit 1 --jq 'length')" != "0" ]]; then
+            echo "An update pull request already exists for $FORMULA $version"
+            exit 0
+          fi
+
+          brew bump-formula-pr "$TAP_NAME/$FORMULA" \
+            --write-only \
+            --url="$archive_url" \
+            --version="$version"
+
+          git switch --create "$branch"
+          git add "$formula_file"
+          git commit \
+            --message="Update $FORMULA to commit ${latest_commit:0:8} ($commit_day)"
+          gh auth setup-git
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$branch" \
+            --title="$FORMULA $version" \
+            --body="Created by the commit-pinned autobump workflow."
