@@ -32,6 +32,24 @@ jobs:
         id: git_setup
         uses: Homebrew/actions/git-user-config@e99025eb970cfa124b8284a35463d87426917478 # 2026.09.28.1
 
+      # `brew bump --open-pr` pushes its branch before creating the PR. If the
+      # PR API call fails, a retry would otherwise fail on that orphan branch.
+      - name: Remove orphaned bump branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while read -r ref; do
+            branch="${ref#refs/heads/}"
+            [[ -n "$branch" ]] || continue
+
+            pr_count="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" \
+              --state all --json number --limit 1 --jq 'length')"
+            if [[ "$pr_count" == "0" ]]; then
+              gh api --method DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch"
+            fi
+          done < <(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/git/matching-refs/heads/bump-" --jq '.[].ref')
+
       - name: Bump formulae
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

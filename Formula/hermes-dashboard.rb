@@ -6,6 +6,12 @@ class HermesDashboard < Formula
   license "MIT"
   head "https://github.com/NousResearch/hermes-agent.git", branch: "main"
 
+  livecheck do
+    url :stable
+    strategy :github_releases
+    regex(/^v?(20\d{2}\.\d{1,2}\.\d{1,2}(?:\.\d+)?)$/i)
+  end
+
   depends_on "hermes-agent"
 
   def install
