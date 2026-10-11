@@ -1,6 +1,6 @@
 # AGENTS.md — homebrew-octavo
 
-A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`.
+A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`, plus `brew services` wrappers (`hermes-dashboard`, `ccr-service`).
 
 ## Project structure
 
@@ -9,7 +9,8 @@ Formula/
 ├── oh-my-zsh.rb    # ohmyzsh/ohmyzsh — untagged, pinned commit
 ├── oh-my-bash.rb   # ohmybash/oh-my-bash — untagged, pinned commit
 ├── oh-my-fish.rb   # oh-my-fish/oh-my-fish — tagged releases (v8+)
-└── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
+├── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
+└── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
 ```
 
 ## Essential commands
@@ -25,7 +26,7 @@ Formula/
 
 ## How each formula works
 
-All four formulae follow the same pattern:
+All formulae follow the same pattern:
 
 1. `url` points to a GitHub archive tarball (commit hash for untagged projects, tag for tagged).
 2. `sha256` is the corresponding tarball checksum.
@@ -36,7 +37,7 @@ All four formulae follow the same pattern:
 ### Versioning
 
 - **oh-my-zsh** and **oh-my-bash**: upstream doesn't tag releases. Version is the commit date (`YYYY-MM-DD` format). `livecheck` is explicitly skipped. Updating means picking a new commit hash, computing the tarball checksum, and setting version to the commit date.
-- **oh-my-fish** and **hermes-dashboard**: upstream tags releases. Version follows the upstream tag. Homebrew auto-detects tags via `livecheck`.
+- **oh-my-fish**, **hermes-dashboard**, and **ccr-service**: upstream tags releases. Version follows the upstream tag. Homebrew auto-detects tags via `livecheck`.
 
 ### Install pattern
 
@@ -48,7 +49,7 @@ end
 
 Shell frameworks use `libexec.install Dir["*"]` — never `prefix.install` or `bin.install`. The frameworks are sourced by the user's shell, not symlinked into PATH.
 
-**`hermes-dashboard` is an exception**: it uses the `service` block to define a `brew services`-managed process (generates a launchd plist on macOS, a systemd unit on Linux) rather than downloading and installing source code. The `url` is a formality pointing to the upstream hermes-agent repo.
+**`hermes-dashboard` and `ccr-service` are exceptions**: they use the `service` block to define a `brew services`-managed process (generates a launchd plist on macOS, a systemd unit on Linux) rather than downloading and installing source code. The `url` is a formality pointing to the upstream repo. `hermes-dashboard` depends on `hermes-agent` (not yet in the tap); `ccr-service` depends on `claude-code-router` from homebrew-core, which installs the `ccr` npm CLI.
 
 ### Caveats pattern
 
@@ -58,7 +59,7 @@ Shell framework formulae have a `caveats` block that tells the user:
 3. How to disable the framework's built-in auto-updater (since Homebrew manages updates).
 4. Where runtime data goes (read-only Cellar workaround).
 
-**`hermes-dashboard`**: caveats show `brew services start/stop/restart` commands.
+**`hermes-dashboard` and `ccr-service`**: caveats show `brew services start/stop/restart` commands plus the service's listening ports.
 
 ## Convention: pin commit hashes with `git-synced`
 
@@ -75,6 +76,7 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`hermes-dashboard` depends on `hermes-agent`**: The `depends_on "hermes-agent"` line requires `hermes-agent` to exist as a formula in the same tap or another tapped repository. If it's not yet added, `brew install hermes-dashboard` will fail with a "no available formula" error — the dependency is declared preemptively.
 - **`hermes-dashboard` uses `service` block**: The `brew services` system generates a launchd plist on macOS and a systemd unit on Linux. The `environment_variables` and `run` paths use `Dir.home` evaluated at formula load time, so the service file is baked with the full absolute path for the user running `brew services start`.
 - **`hermes-dashboard` uses `std_service_path_env`**: The PATH includes Homebrew's standard service path via `std_service_path_env` helper, prepended with the hermes-agent venv and node binary paths.
+- **`ccr-service` depends on homebrew-core's `claude-code-router`**: The wrapper adds only the `service` block; the dependency installs the `ccr` npm CLI (requires `node`). The service runs `ccr serve --no-open` in the foreground (management UI on port 3458, model gateway on port 3456). `ccr start` must NOT be used in the service block — it daemonizes and would exit, causing a restart loop under `keep_alive`.
 
 ## CI/CD
 
