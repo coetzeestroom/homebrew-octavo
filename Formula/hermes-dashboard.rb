@@ -1,8 +1,8 @@
 class HermesDashboard < Formula
   desc "Web Dashboard for Hermes Agent - config, API keys, sessions"
   homepage "https://hermes-agent.nousresearch.com/docs/user-guide/features/web-dashboard"
-  url "https://github.com/NousResearch/hermes-agent/archive/refs/tags/v2026.8.31.tar.gz"
-  sha256 "78fb3ff707ec1d17044b875ecac8bef28aa39d44242824f6871ca40afe7bf217"
+  url "https://github.com/NousResearch/hermes-agent/archive/refs/tags/v2026.9.24.tar.gz"
+  sha256 "15b15ce4e6ec8ea424a081823709d1e17f0943e7b42b59597d24ebb94cbd1742"
   license "MIT"
   head "https://github.com/NousResearch/hermes-agent.git", branch: "main"
 
