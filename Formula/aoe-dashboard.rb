@@ -1,8 +1,8 @@
 class AoeDashboard < Formula
   desc "Web dashboard service for Agent of Empires"
   homepage "https://github.com/agent-of-empires/agent-of-empires"
-  url "https://github.com/agent-of-empires/agent-of-empires/archive/refs/tags/v1.19.0.tar.gz"
-  sha256 "2da687d59726f8c9a68741d09dd01bdcd591d752e5de47c45e28702d30762850"
+  url "https://github.com/agent-of-empires/agent-of-empires/archive/refs/tags/v1.20.0.tar.gz"
+  sha256 "fc83a9330807077a16df2c658d79535149fe0ec895299ace756f22096d13de70"
   license "MIT"
 
   depends_on "aoe"
