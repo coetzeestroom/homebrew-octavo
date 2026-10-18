@@ -33,6 +33,11 @@ class OhMyBash < Formula
       Runtime caches and customisations are written under
       ~/.local/state/oh-my-bash and ~/.local/share/oh-my-bash rather than the
       read-only Cellar keg.
+
+      This formula is not associated with, endorsed by, or affiliated with the
+      upstream project. It is created purely for the author's own use. There is
+      no expectation of support from the author of this package, nor from the
+      authors of the packages referenced herein. Use at your own risk.
     EOS
   end
 

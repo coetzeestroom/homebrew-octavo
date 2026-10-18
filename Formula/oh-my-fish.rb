@@ -24,6 +24,11 @@ class OhMyFish < Formula
       by `brew upgrade oh-my-fish`. Reinstall your packages after upgrading,
       or install the framework with the upstream installer for a persistent
       setup outside Homebrew's control.
+
+      This formula is not associated with, endorsed by, or affiliated with the
+      upstream project. It is created purely for the author's own use. There is
+      no expectation of support from the author of this package, nor from the
+      authors of the packages referenced herein. Use at your own risk.
     EOS
   end
 

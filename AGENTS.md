@@ -6,11 +6,12 @@ A Homebrew **tap** (custom repository of formulae) distributing upstream shell f
 
 ```
 Formula/
-├── oh-my-zsh.rb    # ohmyzsh/ohmyzsh — untagged, pinned commit
+├── aoe-dashboard.rb  # agent-of-empires/agent-of-empires — tagged releases (v1.20.0), brew services wrapper
+├── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
+├── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
 ├── oh-my-bash.rb   # ohmybash/oh-my-bash — untagged, pinned commit
 ├── oh-my-fish.rb   # oh-my-fish/oh-my-fish — tagged releases (v8+)
-├── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
-└── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
+└── oh-my-zsh.rb    # ohmyzsh/ohmyzsh — untagged, pinned commit
 ```
 
 ## Essential commands

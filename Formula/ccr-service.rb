@@ -45,6 +45,11 @@ class CcrService < Formula
       or other coding agents to the router.
 
       This service depends on claude-code-router (installed automatically).
+
+      This formula is not associated with, endorsed by, or affiliated with the
+      upstream project. It is created purely for the author's own use. There is
+      no expectation of support from the author of this package, nor from the
+      authors of the packages referenced herein. Use at your own risk.
     EOS
   end
 
