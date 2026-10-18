@@ -24,6 +24,5 @@ brew install oh-my-bash
 | `oh-my-fish` | Fish framework: packages, themes, `omf` CLI | [oh-my-fish/oh-my-fish](https://github.com/oh-my-fish/oh-my-fish) | Tagged — tracks upstream releases (v8) |
 | `hermes-dashboard` | `brew services` wrapper for the Hermes Agent web dashboard | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | Tagged — tracks upstream releases |
 | `ccr-service` | `brew services` wrapper for claude-code-router (`ccr`) — installs CCR and runs its gateway + web UI as a background service | [musistudio/claude-code-router](https://github.com/musistudio/claude-code-router) | Tagged — tracks upstream releases |
-| `clixad` | Free AI coding agent in your terminal, funded by rewarded ads | [clixad](https://clixad.io/) | npm — pinned registry release |
 
 After installing, follow each formula's caveats (`brew info coetzeer/homebrew-octavo/<formula>`) to wire the framework into its shell config.
