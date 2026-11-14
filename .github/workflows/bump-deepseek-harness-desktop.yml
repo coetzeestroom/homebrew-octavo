@@ -1,0 +1,97 @@
+name: bump deepseek-harness-desktop
+
+# The formula version tracks the npm release of @deepseek-ai/dsh exactly, so
+# this workflow reads the registry's `latest` tag instead of running livecheck.
+# The formula also carries a `livecheck` block for `brew livecheck`, but only
+# this workflow opens the bump pull request.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bump-deepseek-harness-desktop.yml
+  schedule:
+    # Every day at 15:10 UTC, an hour after the generic autobump.
+    - cron: 10 15 * * *
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+
+      - name: Set up git
+        id: git_setup
+        uses: Homebrew/actions/git-user-config@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+
+      - name: Bump to the latest @deepseek-ai/dsh release
+        env:
+          FORMULA: deepseek-harness-desktop
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
+        run: |
+          formula_file="Formula/$FORMULA.rb"
+
+          read -r latest_version tarball_url < <(
+            curl --fail --silent --show-error --location \
+              "https://registry.npmjs.org/@deepseek-ai/dsh/latest" |
+              jq --raw-output '[.version, .dist.tarball] | @tsv'
+          )
+
+          if [[ ! "$latest_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            echo "Unexpected npm version: $latest_version" >&2
+            exit 1
+          fi
+
+          current_version="$(sed -nE 's|.*/-/dsh-(.+)\.tgz.*|\1|p' "$formula_file")"
+          if [[ -z "$current_version" ]]; then
+            echo "Unable to read the pinned version from $formula_file" >&2
+            exit 1
+          fi
+
+          if [[ "$current_version" == "$latest_version" ]]; then
+            echo "$FORMULA is already on @deepseek-ai/dsh $latest_version"
+            exit 0
+          fi
+
+          branch="bump-$FORMULA-$latest_version"
+          if [[ "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" \
+            --state all --json number --limit 1 --jq 'length')" != "0" ]]; then
+            echo "A pull request already exists for $FORMULA $latest_version"
+            exit 0
+          fi
+
+          brew bump-formula-pr "$TAP_NAME/$FORMULA" \
+            --write-only \
+            --url="$tarball_url" \
+            --version="$latest_version" \
+            --no-audit
+
+          git switch --create "$branch"
+          git add "$formula_file"
+          git commit --message="Update $FORMULA to @deepseek-ai/dsh $latest_version"
+          gh auth setup-git
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$branch" \
+            --title="$FORMULA $latest_version" \
+            --body="Created by the deepseek-harness-desktop autobump workflow.
+
+          \`@deepseek-ai/dsh\` $current_version -> $latest_version
+          (npm \`latest\` tag, tarball checksum recomputed by \`brew bump-formula-pr\`)."
