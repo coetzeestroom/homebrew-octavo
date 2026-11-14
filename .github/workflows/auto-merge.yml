@@ -12,6 +12,27 @@ jobs:
       contents: write
       pull-requests: write
     steps:
+      - name: Check that all PR checks are green
+        env:
+          GH_TOKEN: ${{ secrets.BREW_PAT }}
+        run: |
+          set -euo pipefail
+          bad=0
+          while IFS=$'\t' read -r number title; do
+            [[ -z "${number}" ]] && continue
+            # Fail if any check run is in a failing state.
+            if gh pr checks "${number}" --repo "$GITHUB_REPOSITORY" 2>/dev/null \
+                | grep -E 'fail|cancelled|timed_out|action_required' >/dev/null; then
+              echo "PR #${number} (${title}) has failing checks; skipping automerge." >&2
+              bad=1
+            fi
+          done < <(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '.[] | [.number, .title] | @tsv')
+          if [[ "${bad}" == "1" ]]; then
+            echo "Automerge skipped: at least one open PR has failing checks."
+            exit 0
+          fi
+
       - name: Merge eligible pull requests
         uses: pascalgn/automerge-action@7961b8b5eec56cc088c140b56d864285eabd3f67 # v0.16.4
         env:
