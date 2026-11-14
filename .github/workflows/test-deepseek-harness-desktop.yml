@@ -1,0 +1,38 @@
+name: test deepseek-harness-desktop
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Formula/deepseek-harness-desktop.rb
+  pull_request:
+    paths:
+      - Formula/deepseek-harness-desktop.rb
+  workflow_dispatch:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  style-and-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+
+      - name: Trust the tap
+        run: brew trust coetzeer/octavo
+
+      - name: Style check
+        run: brew style coetzeer/octavo/deepseek-harness-desktop
+
+      - name: New-formula audit
+        run: brew audit --new coetzeer/octavo/deepseek-harness-desktop
+
+      - name: Livecheck
+        run: brew livecheck coetzeer/octavo/deepseek-harness-desktop

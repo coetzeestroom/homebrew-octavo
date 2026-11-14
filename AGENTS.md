@@ -1,6 +1,6 @@
 # AGENTS.md — homebrew-octavo
 
-A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`, plus `brew services` wrappers (`hermes-dashboard`, `ccr-service`).
+A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`, plus `brew services` wrappers (`hermes-dashboard`, `ccr-service`), and the `deepseek-harness-desktop` Pake desktop wrapper.
 
 ## Project structure
 
@@ -10,7 +10,13 @@ Formula/
 ├── oh-my-bash.rb   # ohmybash/oh-my-bash — untagged, pinned commit
 ├── oh-my-fish.rb   # oh-my-fish/oh-my-fish — tagged releases (v8+)
 ├── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
-└── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
+├── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
+├── deepseek-harness-desktop.rb  # @deepseek-ai/dsh npm tarball — Pake/Tauri window around `dsh web`; Linux only
+├── ccr-desktop.rb  # STUB: desktop window for Claude Code Router web UI (to be completed)
+├── omnirouter-desktop.rb  # STUB: desktop window for OmniRouter web UI (to be completed)
+├── hermes-desktop.rb  # STUB: desktop window for Hermes Agent web UI (to be completed)
+├── herdr-desktop.rb  # STUB: desktop window for Herdr web UI (to be completed)
+└── openwebui-desktop.rb  # STUB: desktop window for Open WebUI (to be completed)
 ```
 
 ## Essential commands
@@ -38,6 +44,7 @@ All formulae follow the same pattern:
 
 - **oh-my-zsh** and **oh-my-bash**: upstream doesn't tag releases. Version is the commit date (`YYYY-MM-DD` format). `livecheck` is explicitly skipped. Updating means picking a new commit hash, computing the tarball checksum, and setting version to the commit date.
 - **oh-my-fish**, **hermes-dashboard**, and **ccr-service**: upstream tags releases. Version follows the upstream tag. Homebrew auto-detects tags via `livecheck`.
+- **deepseek-harness-desktop**: version tracks the npm `latest` dist-tag of `@deepseek-ai/dsh` exactly. `url` is the registry tarball (`https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-<version>.tgz`) and `livecheck` reads `version` from `https://registry.npmjs.org/@deepseek-ai/dsh/latest` with the `:json` strategy. The dedicated `bump-deepseek-harness-desktop.yml` workflow opens the bump PR.
 
 ### Install pattern
 
@@ -61,6 +68,42 @@ Shell framework formulae have a `caveats` block that tells the user:
 
 **`hermes-dashboard` and `ccr-service`**: caveats show `brew services start/stop/restart` commands plus the service's listening ports.
 
+### deepseek-harness-desktop (Pake window)
+
+This formula is the only one that compiles a native app during `brew install`:
+
+1. `system "npm", "install", *std_npm_args` installs `@deepseek-ai/dsh` into `libexec/lib/node_modules`, and `bin.install_symlink libexec/"bin/dsh"` exposes the CLI on `PATH`.
+2. The icon is copied from `dsh-web-frontend/dist/icon-512.png` inside the npm tree.
+3. `pake http://127.0.0.1:64711/ --no-bundle ...` compiles the Tauri/WebKitGTK binary; the resulting `*-binary` is installed as `libexec/deepseek-harness-app`.
+4. `libexec/auth-redirect.mjs` is a loopback sidecar, and `bin/deepseek-harness-desktop` is a bash wrapper that starts `dsh web`, waits for its printed `?token=` URL, starts the sidecar, launches the window, and kills all of them on exit.
+
+Lifecycle details worth remembering:
+
+- **Auth cannot be disabled.** `dsh web` mints a random per-process launch token and prints `http://127.0.0.1:<port>/?token=<token>`. Only that URL (or a signed cookie backed by `$DSH_HOME/.credentials.yaml`) is accepted; plain `/` returns HTTP 401. Pake bakes its URL at compile time, so the redirect sidecar serves the stale URL and 302s the window to the freshly printed one.
+- **`dsh web` must use `--no-open`**, otherwise it also opens the system browser.
+- **The sidecar port is baked in** (`64711`); the web port can be overridden at runtime with `DSH_DESKTOP_PORT` (default `64710`). Both defaults sit above the Linux ephemeral range (32768-60999).
+- **`flock` on `${XDG_RUNTIME_DIR:-$TMPDIR}/deepseek-harness-desktop-$UID.lock`** refuses a second concurrent launch.
+- **`--multi-window`, `--no-restore-last-url`** keep the window pointing at the redirect sidecar instead of restoring a stale URL.
+- The desktop entry is linked into `~/.local/share/applications` via `post_install_steps` (`mkdir_p` + `symlink`) because Homebrew 7 rejects the legacy `post_install` method.
+
+**System build prerequisites are deliberately not Homebrew dependencies.** Tauri links against the host's WebKitGTK/GTK stack, and bottling 2 GB of WebKit into the tap is undesirable. Homebrew's `rust` keg also drags in LLVM, so Rust is treated the same way. `check_system_dependencies!` runs first in `install`, checks `REQUIRED_PKG_CONFIG_MODULES` (`gtk+-3.0`, `javascriptcoregtk-4.1`, `libsoup-3.0`, `librsvg-2.0`, `openssl`, `webkit2gtk-4.1`) with the host `/usr/bin/pkg-config`, checks for `cargo`/`rustc` >= `RUST_MIN_VERSION` (1.77), and `odie`s with the commands for `/etc/os-release`:
+
+```sh
+# Arch / CachyOS / EndeavourOS / Manjaro
+sudo pacman -S --needed base-devel webkit2gtk-4.1 gtk3 librsvg libayatana-appindicator openssl xdotool rust curl wget file
+
+# Debian / Ubuntu / Mint / Pop!_OS
+sudo apt update && sudo apt install -y build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev rustc cargo curl wget file
+
+# Fedora / RHEL / Rocky / Alma
+sudo dnf install -y webkit2gtk4.1-devel openssl-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ make pkgconf-pkg-config rust cargo curl wget file
+
+# openSUSE
+sudo zypper install -y webkit2gtk4.1-devel libopenssl-devel libayatana-appindicator3-devel librsvg-devel libxdo-devel gcc gcc-c++ make pkg-config rust cargo curl wget file
+```
+
+Those libraries are needed at run time too, so they must not be removed after the build. `libappindicator-gtk3` does not exist on CachyOS; `libayatana-appindicator` is the package there. A rustup toolchain works too (`install` prepends `dirname(cargo)` to the build `PATH`), but the version check still runs.
+
 ## Convention: pin commit hashes with `git-synced`
 
 When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in the `url` must match a commit from the upstream repository's default branch. The autobump workflow uses `--bump-synced` to enforce this.
@@ -78,11 +121,18 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`hermes-dashboard` uses `std_service_path_env`**: The PATH includes Homebrew's standard service path via `std_service_path_env` helper, prepended with the hermes-agent venv and node binary paths.
 - **`ccr-service` depends on homebrew-core's `claude-code-router`**: The wrapper adds only the `service` block; the dependency installs the `ccr` npm CLI (requires `node`). The service runs `ccr serve --no-open` in the foreground (management UI on port 3458, model gateway on port 3456). `ccr start` must NOT be used in the service block — it daemonizes and would exit, causing a restart loop under `keep_alive`.
 - **Wrapper formulae need a real file in the keg**: Brew's empty-installation check ignores `INSTALL_RECEIPT.json`, so writing that file does not prevent "Empty installation" failures in `brew test-bot`. `ccr-service` installs a `libexec/SERVICE_WRAPPER` marker instead. `hermes-dashboard` still uses the old `INSTALL_RECEIPT.json` pattern and would hit the same failure if test-bot installs it; it also fails `brew audit` on CI because its service command (`~/.hermes/hermes-agent/venv/bin/hermes`) does not exist on the runner.
+- **`deepseek-harness-desktop` needs the host pkg-config**: Homebrew's `pkgconf` only searches its own prefix, so the formula sets `ENV["PKG_CONFIG"] = /usr/bin/pkg-config` before the Pake compile. Without it, Tauri cannot see the system WebKitGTK `.pc` files.
+- **`deepseek-harness-desktop` must redirect `CARGO_TARGET_DIR`**: Pake otherwise writes Cargo's `target/` into the `pake` keg (which is read-only/immutable from Homebrew's point of view). The formula points it at `buildpath/"pake-target"`.
+- **`deepseek-harness-desktop` skips npm install scripts on purpose**: `std_npm_args` passes `--ignore-scripts`, and `node-pty` works because it ships prebuilt `prebuilds/linux-*/pty.node` binaries. Do not add `--build-from-source`/`--foreground-scripts` "fixes"; they pull in a full node-gyp toolchain for no benefit.
+- **`deepseek-harness-desktop` is Linux only**: `depends_on :linux` plus the WebKitGTK stack means `brew audit` on macOS is not meaningful, and macOS `test-bot` skips it. Linux `test-bot` also lacks the system WebKitGTK dev packages, so CI covers tap syntax/style rather than a full compile.
+- **`deepseek-harness-desktop` uses `post_install_steps`**: Homebrew 7 removed the legacy `post_install` method for new formulae. Use `mkdir_p`/`symlink` with `base: :home` / `source_base: :prefix` instead.
+- **`deepseek-harness-desktop` launch failures**: On Wayland with proprietary NVIDIA drivers a blank window usually means DMA-BUF compositing failed; `DSH_DESKTOP_DISABLE_DMABUF=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`. A window that does not authenticate means the sidecar port `64711` is occupied by something else.
 
 ## CI/CD
 
 - **tests.yml**: Runs `brew test-bot` on `macos-26` and `ubuntu-latest` (inside Homebrew container). Runs on every PR and push to `main`. Tests tap syntax and formula installation.
 - **autobump.yml**: Scheduled daily at 14:10 UTC. Runs `brew bump --no-fork --open-pr` to auto-update formulae. Only triggers on PR merge to `main` or schedule.
+- **bump-deepseek-harness-desktop.yml**: Scheduled daily at 15:10 UTC (plus `workflow_dispatch` and pushes touching its own file). Reads the npm `latest` tag for `@deepseek-ai/dsh`, compares it with the version pinned in the formula, then runs `brew bump-formula-pr --write-only --url=... --version=... --no-audit` on branch `bump-deepseek-harness-desktop-<version>` and opens the PR with `gh`. It skips when a PR for that branch already exists.
 - **dependabot.yml**: Weekly updates for GitHub Actions. Pinned to `@v6.1.0` for cache, `@v7.0.1` for upload-artifact.
 - **publish.yml**: Removed (kept in `.github/removed/` for reference). Not active.
 
