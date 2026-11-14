@@ -26,13 +26,13 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
 
       - name: Trust the tap
-        run: brew trust coetzeer/octavo
+        run: brew trust coetzeestroom/octavo
 
       - name: Style check
-        run: brew style coetzeer/octavo/deepseek-harness-desktop
+        run: brew style coetzeestroom/octavo/deepseek-harness-desktop
 
       - name: New-formula audit
-        run: brew audit --new coetzeer/octavo/deepseek-harness-desktop
+        run: brew audit --new coetzeestroom/octavo/deepseek-harness-desktop
 
       - name: Livecheck
-        run: brew livecheck coetzeer/octavo/deepseek-harness-desktop
+        run: brew livecheck coetzeestroom/octavo/deepseek-harness-desktop
