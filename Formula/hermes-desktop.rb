@@ -2,7 +2,6 @@ class HermesDesktop < Formula
   desc "Desktop app for the Hermes Agent web UI"
   homepage "https://hermes-agent.nousresearch.com"
   url "https://github.com/NousResearch/hermes-agent/archive/refs/tags/v2026.9.24.tar.gz"
-  version "2026.9.24"
   sha256 "15b15ce4e6ec8ea424a081823709d1e17f0943e7b42b59597d24ebb94cbd1742"
   license "MIT"
 

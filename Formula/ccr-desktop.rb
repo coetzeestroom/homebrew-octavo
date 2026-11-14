@@ -2,7 +2,6 @@ class CcrDesktop < Formula
   desc "Desktop app for the Claude Code Router (ccr) web UI"
   homepage "https://github.com/musistudio/claude-code-router"
   url "https://registry.npmjs.org/claude-code-router/-/claude-code-router-2.1.1.tgz"
-  version "2.1.1"
   sha256 "0cf80f9e3153cd173d11b705d0c42ac9f4433dd1af94c8d6033bde0d2c984fd4"
   license "MIT"
 

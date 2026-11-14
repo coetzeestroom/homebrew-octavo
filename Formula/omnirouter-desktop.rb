@@ -2,7 +2,6 @@ class OmnirouterDesktop < Formula
   desc "Desktop app for the OmniRouter web UI"
   homepage "https://github.com/Godde3s/omnirouter"
   url "https://github.com/Godde3s/omnirouter/releases/download/v1.4.0/dist-omnirouter-linux-amd64.tar.gz"
-  version "1.4.0"
   sha256 "883d2ea6e7a3d9069a4e08f6883814d1db29afb3901d9a7e12bd748349f4b488"
   license "MIT"
 

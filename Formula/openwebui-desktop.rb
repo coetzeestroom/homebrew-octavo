@@ -2,7 +2,6 @@ class OpenwebuiDesktop < Formula
   desc "Desktop app for Open WebUI"
   homepage "https://github.com/open-webui/open-webui"
   url "https://files.pythonhosted.org/packages/8b/a3/aafaaf7d3e353a30ff95db8bccd34b3236dbd4c17049846eb30eb79c0c9e/open_webui-0.13.3.tar.gz"
-  version "0.13.3"
   sha256 "42664cbd2701edf03f3f77a2a1731e880a3ae0dbca2b5cb81607932ba2a5a516"
   license "MIT"
 
