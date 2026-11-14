@@ -43,14 +43,13 @@ These formulae compile a standalone Pake (Tauri/WebKitGTK) window around a local
 ### Testing a formula locally
 
 ```bash
-# From the tap checkout:
-cd /home/raymondcoetzee/git/homebrew-octavo
+# Make sure the tap is up to date first:
+brew update
 
-# Install from local source (no tap needed):
-brew install --build-from-source ./Formula/<formula>.rb
-
-# Or via the tap name:
-brew install --build-from-source coetzeer/octavo/<formula>
+# Install from the tap (builds from source). Note: a local file path like
+# ./Formula/<formula>.rb does NOT work — Homebrew treats the argument as a
+# tap name, not a file path.
+HOMEBREW_NO_AUTO_UPDATE=1 brew install --build-from-source coetzeer/octavo/<formula>
 
 # Run the formula's test block:
 brew test coetzeer/octavo/<formula>
