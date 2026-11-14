@@ -53,8 +53,9 @@ class OpenwebuiDesktop < Formula
     ENV.prepend_path "PATH", "#{REAL_HOME}/.cargo/bin"
 
     # Create an isolated virtualenv and install Open WebUI into it.
+    # Open WebUI 0.13.x requires Python >=3.11,<3.13, so pin python@3.12.
     venv = libexec/"venv"
-    system "python3", "-m", "venv", venv
+    system "#{formula_opt_bin("python@3.12")}/python3.12", "-m", "venv", venv
     system venv/"bin/pip", "install", "--upgrade", "pip"
     system venv/"bin/pip", "install", "open-webui==#{version}"
 
