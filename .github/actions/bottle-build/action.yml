@@ -89,7 +89,22 @@ runs:
         cp "$(brew --repo coetzeestroom/octavo)/Formula/${FORMULA}.rb" "Formula/${FORMULA}.rb"
         git add "Formula/${FORMULA}.rb"
         git commit -m "Add bottle for ${FORMULA}"
-        git push origin HEAD:main
+
+        # Several bottle workflows can finish at the same time, so a plain push
+        # can be rejected as non-fast-forward. Rebase and retry instead.
+        for attempt in 1 2 3 4 5; do
+          if git push origin HEAD:main; then
+            break
+          fi
+          if [[ "${attempt}" == "5" ]]; then
+            echo "Could not push the bottle commit after ${attempt} attempts." >&2
+            exit 1
+          fi
+          echo "Push rejected (attempt ${attempt}); rebasing onto origin/main." >&2
+          git fetch origin main
+          git rebase origin/main
+          sleep $((attempt * 5))
+        done
 
     - name: Prune old assets (keep 3 versions)
       if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
