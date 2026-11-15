@@ -1,14 +1,14 @@
-name: test hermes-desktop
+name: test hermes-webui-desktop
 
 on:
   push:
     branches:
       - main
     paths:
-      - Formula/hermes-desktop.rb
+      - Formula/hermes-webui-desktop.rb
   pull_request:
     paths:
-      - Formula/hermes-desktop.rb
+      - Formula/hermes-webui-desktop.rb
   workflow_dispatch:
 
 permissions: {}
@@ -37,16 +37,16 @@ jobs:
         run: brew trust coetzeestroom/octavo
 
       - name: Style check
-        run: brew style coetzeestroom/octavo/hermes-desktop
+        run: brew style coetzeestroom/octavo/hermes-webui-desktop
 
       - name: New-formula audit
-        run: brew audit --new coetzeestroom/octavo/hermes-desktop
+        run: brew audit --new coetzeestroom/octavo/hermes-webui-desktop
 
       - name: Livecheck
-        run: brew livecheck coetzeestroom/octavo/hermes-desktop
+        run: brew livecheck coetzeestroom/octavo/hermes-webui-desktop
 
       - name: Bottle build
         uses: ./.github/actions/bottle-build
         with:
-          formula: hermes-desktop
+          formula: hermes-webui-desktop
           upload: ${{ github.event_name == 'push' }}

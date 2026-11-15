@@ -1,6 +1,6 @@
 # AGENTS.md — homebrew-octavo
 
-A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`, plus `brew services` wrappers (`hermes-dashboard`, `ccr-service`), and the `deepseek-harness-desktop` Pake desktop wrapper.
+A Homebrew **tap** (custom repository of formulae) distributing upstream shell frameworks (`oh-my-zsh`, `oh-my-bash`, `oh-my-fish`) via `brew install`, plus `brew services` wrappers (`hermes-dashboard`, `ccr-service`), and the Pake desktop wrappers (`deepseek-harness-desktop`, `hermes-webui-desktop`, `hermes-workspace-desktop`).
 
 ## Project structure
 
@@ -12,9 +12,10 @@ Formula/
 ├── hermes-dashboard.rb  # NousResearch/hermes-agent — tagged releases (v2026.8.31+), brew services wrapper
 ├── ccr-service.rb  # musistudio/claude-code-router — tagged releases (v3.1.3+), brew services wrapper; depends on homebrew-core's claude-code-router
 ├── deepseek-harness-desktop.rb  # @deepseek-ai/dsh npm tarball — Pake/Tauri window around `dsh web`; Linux only
+├── hermes-webui-desktop.rb  # nesquena/hermes-webui — Pake window around the Python WebUI; Linux only
+├── hermes-workspace-desktop.rb  # outsourc-e/hermes-workspace — Pake window around the TanStack Start SSR server; Linux only
 ├── ccr-desktop.rb  # STUB: desktop window for Claude Code Router web UI (to be completed)
 ├── omnirouter-desktop.rb  # STUB: desktop window for OmniRouter web UI (to be completed)
-├── hermes-desktop.rb  # STUB: desktop window for Hermes Agent web UI (to be completed)
 ├── herdr-desktop.rb  # STUB: desktop window for Herdr web UI (to be completed)
 └── openwebui-desktop.rb  # STUB: desktop window for Open WebUI (to be completed)
 ```
@@ -43,7 +44,7 @@ All formulae follow the same pattern:
 ### Versioning
 
 - **oh-my-zsh** and **oh-my-bash**: upstream doesn't tag releases. Version is the commit date (`YYYY-MM-DD` format). `livecheck` is explicitly skipped. Updating means picking a new commit hash, computing the tarball checksum, and setting version to the commit date.
-- **oh-my-fish**, **hermes-dashboard**, and **ccr-service**: upstream tags releases. Version follows the upstream tag. Homebrew auto-detects tags via `livecheck`.
+- **oh-my-fish**, **hermes-dashboard**, **ccr-service**, **hermes-webui-desktop**, and **hermes-workspace-desktop**: upstream tags releases. Version follows the upstream tag. Homebrew auto-detects tags via `livecheck`.
 - **deepseek-harness-desktop**: version tracks the npm `latest` dist-tag of `@deepseek-ai/dsh` exactly. `url` is the registry tarball (`https://registry.npmjs.org/@deepseek-ai/dsh/-/dsh-<version>.tgz`) and `livecheck` reads `version` from `https://registry.npmjs.org/@deepseek-ai/dsh/latest` with the `:json` strategy. The dedicated `bump-deepseek-harness-desktop.yml` workflow opens the bump PR.
 
 ### Install pattern
@@ -104,6 +105,36 @@ sudo zypper install -y webkit2gtk4.1-devel libopenssl-devel libayatana-appindica
 
 Those libraries are needed at run time too, so they must not be removed after the build. `libappindicator-gtk3` does not exist on CachyOS; `libayatana-appindicator` is the package there. A rustup toolchain works too (`install` prepends `dirname(cargo)` to the build `PATH`), but the version check still runs.
 
+### hermes-webui-desktop (Pake window)
+
+Wraps `nesquena/hermes-webui`, a dependency-light Python server (`server.py` + `api/` + `static/`) with no build step:
+
+1. Only the runtime files are installed into `libexec`; docs, tests, container files and Nix expressions stay out of the bottle.
+2. `virtualenv_create(libexec/".venv", "python@3.13")` plus the `pyyaml` resource provide the only hard dependency. The venv is named `.venv` on purpose: `api/config.py` resolves `REPO_ROOT/.venv` when it looks for a Python interpreter.
+3. `pake http://127.0.0.1:64740/ ...` compiles the window, and `bin/hermes-webui-desktop` starts `server.py`, waits for the port, launches the window, and kills the server when the window closes.
+4. `test do` boots `server.py` on a free port and asserts `GET /health` returns 200, so CI exercises the real payload before the bottle is built.
+
+Notes:
+
+- `cryptography` (upstream's optional passkey/WebAuthn support) is deliberately not bundled — building it from source needs Rust. Password auth via `HERMES_WEBUI_PASSWORD` works without it.
+- Chat needs a running Hermes Agent gateway; the UI starts without one and reports the agent as offline.
+- Session state follows upstream defaults (`~/.hermes`) unless `HERMES_WEBUI_STATE_DIR` is set.
+
+### hermes-workspace-desktop (Pake window)
+
+Wraps `outsourc-e/hermes-workspace`, a TanStack Start (Vite) app. `install` is the heaviest build in the tap:
+
+1. `pnpm install --frozen-lockfile` with explicit `--allow-build` flags. pnpm 12 aborts with `ERR_PNPM_IGNORED_BUILDS` unless every scripted dependency was classified: `esbuild` and `unrs-resolver` are allowed, `electron`/`electron-winstaller` are denied. `--store-dir` keeps the store inside `buildpath`.
+2. `pnpm build` writes `dist/client` (static assets) and `dist/server` (the SSR handler).
+3. `pnpm exec esbuild server-entry.js --bundle --format=esm --banner:js=...` bundles the SSR server and every runtime dependency into `libexec/server.mjs` (~21 MB). Shipping `node_modules` instead would be ~1 GB. The banner installs a real `require` via `createRequire`, because CJS dependencies (`react-dom`) call `require` for Node builtins and plain ESM output crashes on them.
+4. The window points at `http://127.0.0.1:64770/`; the wrapper runs `node server.mjs` with `HOST=127.0.0.1`, `PORT`, `NODE_ENV=production` and `cd`s into `libexec` so `skills/` resolves.
+5. `test do` boots `server.mjs` on a free port and asserts `GET /` returns 200.
+
+Notes:
+
+- `server-entry.js` is upstream's Node HTTP wrapper around `dist/server/server.js`. `node dist/server/server.js` exits immediately and `package.json`'s `start` script still points at a stale `.output/server/index.mjs`, so always go through `server-entry.js`.
+- The Workspace is a control plane for a Hermes Agent gateway: `HERMES_API_URL` (default `http://127.0.0.1:8642`) and `HERMES_DASHBOARD_URL` (default `http://127.0.0.1:9119`). Without a gateway the window still opens and reports the agent as offline.
+
 ## Convention: pin commit hashes with `git-synced`
 
 When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in the `url` must match a commit from the upstream repository's default branch. The autobump workflow uses `--bump-synced` to enforce this.
@@ -126,11 +157,16 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`deepseek-harness-desktop` skips npm install scripts on purpose**: `std_npm_args` passes `--ignore-scripts`, and `node-pty` works because it ships prebuilt `prebuilds/linux-*/pty.node` binaries. Do not add `--build-from-source`/`--foreground-scripts` "fixes"; they pull in a full node-gyp toolchain for no benefit.
 - **`deepseek-harness-desktop` is Linux only**: `depends_on :linux` plus the WebKitGTK stack means `brew audit` on macOS is not meaningful, and macOS `test-bot` skips it. Linux `test-bot` also lacks the system WebKitGTK dev packages, so CI covers tap syntax/style rather than a full compile.
 - **`deepseek-harness-desktop` uses `post_install_steps`**: Homebrew 7 removed the legacy `post_install` method for new formulae. Use `mkdir_p`/`symlink` with `base: :home` / `source_base: :prefix` instead.
+- **`hermes-webui-desktop` only bundles PyYAML**: `resource "pyyaml"` is built from the PyPI sdist into `libexec/.venv`. Adding `cryptography` would require a full Rust/OpenSSL build at install time; password auth covers the gap.
+- **`hermes-workspace-desktop` needs `--allow-build` flags**: with pnpm 12 a bare `pnpm install --frozen-lockfile` fails on `ERR_PNPM_IGNORED_BUILDS`. Keep esbuild and `unrs-resolver` allowed and electron denied; `--ignore-scripts` does not silence the error.
+- **`hermes-workspace-desktop` bundles the SSR server with esbuild**: the ESM output needs the `--banner:js` `createRequire` shim, otherwise `react-dom` throws `Dynamic require of "util" is not supported`. Re-test `node server.mjs` after upgrading upstream.
+- **Desktop ports**: `deepseek-harness-desktop` 64710/64711, `ccr-desktop` 64720, `omnirouter-desktop` 64730, `hermes-webui-desktop` 64740, `herdr-desktop` 64750, `openwebui-desktop` 64760, `hermes-workspace-desktop` 64770 — all above the Linux ephemeral range.
 - **`deepseek-harness-desktop` launch failures**: On Wayland with proprietary NVIDIA drivers a blank window usually means DMA-BUF compositing failed; `DSH_DESKTOP_DISABLE_DMABUF=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`. A window that does not authenticate means the sidecar port `64711` is occupied by something else.
 
 ## CI/CD
 
 - **tests.yml**: Runs `brew test-bot` on `macos-26` and `ubuntu-latest` (inside Homebrew container). Runs on every PR and push to `main`. Tests tap syntax and formula installation.
+- **test-*-desktop.yml**: One workflow per desktop formula, driven by the composite action in `.github/actions/bottle-build/action.yml`. It installs the host build deps, runs `brew install --build-bottle`, `brew test` (early validation), builds the bottle, and on pushes to `main` uploads it to the `bottles` release, merges the bottle block into the formula, commits, and prunes old assets (three versions per formula). Pull requests only build — nothing is uploaded or committed. Runs on `ubuntu-24.04` (no container), because `actions/checkout` cannot write to the Homebrew container's `/__w` temp dir.
 - **autobump.yml**: Scheduled daily at 14:10 UTC. Runs `brew bump --no-fork --open-pr` to auto-update formulae. Only triggers on PR merge to `main` or schedule.
 - **bump-deepseek-harness-desktop.yml**: Scheduled daily at 15:10 UTC (plus `workflow_dispatch` and pushes touching its own file). Reads the npm `latest` tag for `@deepseek-ai/dsh`, compares it with the version pinned in the formula, then runs `brew bump-formula-pr --write-only --url=... --version=... --no-audit` on branch `bump-deepseek-harness-desktop-<version>` and opens the PR with `gh`. It skips when a PR for that branch already exists.
 - **dependabot.yml**: Weekly updates for GitHub Actions. Pinned to `@v6.1.0` for cache, `@v7.0.1` for upload-artifact.

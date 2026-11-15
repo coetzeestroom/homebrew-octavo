@@ -35,9 +35,10 @@ These formulae compile a standalone Pake (Tauri/WebKitGTK) window around a local
 |---|---|---|---|
 | `ccr-desktop` | Claude Code Router | 64720 | `ccr serve --no-open` (via `claude-code-router`) |
 | `omnirouter-desktop` | OmniRouter | 64730 | `omnirouter` binary |
-| `hermes-desktop` | Hermes Agent dashboard | 64740 | `hermes dashboard` (via `hermes-agent`) |
+| `hermes-webui-desktop` | Hermes WebUI | 64740 | `server.py` from [nesquena/hermes-webui](https://github.com/nesquena/hermes-webui) (Python venv) |
 | `herdr-desktop` | Herdr WebUI | 64750 | `herdr-webui --https off --backend-mode builtin` |
 | `openwebui-desktop` | Open WebUI | 64760 | `open-webui serve --port 64760` (pip venv) |
+| `hermes-workspace-desktop` | Hermes Workspace | 64770 | `server-entry.js` from [outsourc-e/hermes-workspace](https://github.com/outsourc-e/hermes-workspace) (bundled SSR server) |
 | `deepseek-harness-desktop` | DeepSeek Harness | 64710/64711 | `dsh web` (npm) |
 
 ### Testing a formula locally
