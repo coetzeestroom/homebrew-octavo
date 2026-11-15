@@ -89,7 +89,7 @@ runs:
         cp "$(brew --repo coetzeestroom/octavo)/Formula/${FORMULA}.rb" "Formula/${FORMULA}.rb"
         git add "Formula/${FORMULA}.rb"
         git commit -m "Add bottle for ${FORMULA}"
-        git push
+        git push origin HEAD:main
 
     - name: Prune old assets (keep 3 versions)
       if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
