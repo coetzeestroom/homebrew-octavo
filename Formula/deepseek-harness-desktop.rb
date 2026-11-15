@@ -168,6 +168,14 @@ class DeepseekHarnessDesktop < Formula
     system "npm", "install", *std_npm_args
     bin.install_symlink libexec/"bin/dsh"
 
+    # Trim non-runtime files from the npm tree to keep the bottle small:
+    # TypeScript declarations, source maps and per-package docs are not needed
+    # at run time. LICENSE files are intentionally kept for compliance.
+    system "find", (libexec/"lib/node_modules").to_s, "-type", "f",
+           "(", "-name", "*.map", "-o", "-name", "*.d.ts",
+           "-o", "-name", "README.md", "-o", "-name", "CHANGELOG.md", ")",
+           "-delete"
+
     icon = Pathname.glob(libexec/"lib/node_modules/**/dsh-web-frontend/dist/icon-512.png").first
     odie "Could not find the DeepSeek Harness icon in the installed npm tree" if icon.nil?
     (share/"icons/hicolor/512x512/apps").install icon => "deepseek-harness-desktop.png"
