@@ -22,6 +22,8 @@ runs:
         sudo apt-get install -y --no-install-recommends \
           build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
           libayatana-appindicator3-dev librsvg2-dev libxdo-dev rustc cargo
+        sudo mkdir -p "$HOME/.cargo"
+        sudo chown -R "$(id -u):$(id -g)" "$HOME/.cargo"
 
     - name: Install with --build-bottle
       shell: bash
@@ -85,6 +87,8 @@ runs:
       run: |
         set -euo pipefail
         json=$(ls ./*.bottle.json)
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
         brew bottle --merge --write --no-commit "$json"
         git add "Formula/${FORMULA}.rb"
         git commit -m "Add bottle for ${FORMULA}"
