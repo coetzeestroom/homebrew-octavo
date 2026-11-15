@@ -18,12 +18,20 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
-  style-and-audit:
-    runs-on: ubuntu-latest
+  test-and-bottle:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: read
     steps:
+      - name: Check out tap
+        uses: actions/checkout@v4
+
       - name: Set up Homebrew
         id: set-up-homebrew
         uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Trust the tap
         run: brew trust coetzeestroom/octavo
@@ -36,3 +44,9 @@ jobs:
 
       - name: Livecheck
         run: brew livecheck coetzeestroom/octavo/ccr-desktop
+
+      - name: Bottle build
+        uses: ./.github/actions/bottle-build
+        with:
+          formula: ccr-desktop
+          upload: ${{ github.event_name == 'push' }}
