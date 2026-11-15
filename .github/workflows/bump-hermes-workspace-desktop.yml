@@ -1,4 +1,4 @@
-name: bump hermes-desktop
+name: bump hermes-workspace-desktop
 
 on:
   workflow_dispatch:
@@ -6,9 +6,9 @@ on:
     branches:
       - main
     paths:
-      - .github/workflows/bump-hermes-desktop.yml
+      - .github/workflows/bump-hermes-workspace-desktop.yml
   schedule:
-    - cron: "30 15 * * *"
+    - cron: "10 16 * * *"
 
 permissions: {}
 
@@ -31,9 +31,9 @@ jobs:
         id: git_setup
         uses: Homebrew/actions/git-user-config@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
 
-      - name: Bump hermes-desktop
+      - name: Bump hermes-workspace-desktop
         env:
-          FORMULA: hermes-desktop
+          FORMULA: hermes-workspace-desktop
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
