@@ -19,10 +19,7 @@ defaults:
 
 jobs:
   test-and-bottle:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/homebrew/brew:main
-      options: --privileged
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: read

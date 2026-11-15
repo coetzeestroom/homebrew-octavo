@@ -18,8 +18,8 @@ runs:
     - name: Install system build deps
       shell: bash
       run: |
-        apt-get update
-        apt-get install -y --no-install-recommends \
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
           build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
           libayatana-appindicator3-dev librsvg2-dev libxdo-dev rustc cargo
 
@@ -38,23 +38,16 @@ runs:
           --root-url "${{ inputs.root-url }}" \
           coetzeestroom/octavo/${{ inputs.formula }}
 
-    - name: Set up git identity
-      if: inputs.upload == 'true'
-      shell: bash
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        gh auth setup-git
-
     - name: Check idempotency
       if: inputs.upload == 'true'
       id: idempotency
       shell: bash
       env:
+        GH_TOKEN: ${{ github.token }}
         FORMULA: ${{ inputs.formula }}
       run: |
         set -euo pipefail
-        json=$(ls *.bottle.json)
+        json=$(ls ./*.bottle.json)
         filename=$(jq -r '.[].bottle.tags.x86_64_linux.filename' "$json")
 
         if gh release view bottles >/dev/null 2>&1; then
@@ -70,10 +63,11 @@ runs:
       if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
       shell: bash
       env:
+        GH_TOKEN: ${{ github.token }}
         FORMULA: ${{ inputs.formula }}
       run: |
         set -euo pipefail
-        json=$(ls *.bottle.json)
+        json=$(ls ./*.bottle.json)
         filename=$(jq -r '.[].bottle.tags.x86_64_linux.filename' "$json")
         localname=$(jq -r '.[].bottle.tags.x86_64_linux.local_filename' "$json")
 
@@ -90,11 +84,9 @@ runs:
         FORMULA: ${{ inputs.formula }}
       run: |
         set -euo pipefail
-        json=$(ls *.bottle.json)
-        cd "$(brew --repo coetzeestroom/octavo)"
-        git checkout main
-        git pull --ff-only
+        json=$(ls ./*.bottle.json)
         brew bottle --merge --write --no-commit "$json"
+        cp "$(brew --repo coetzeestroom/octavo)/Formula/${FORMULA}.rb" "Formula/${FORMULA}.rb"
         git add "Formula/${FORMULA}.rb"
         git commit -m "Add bottle for ${FORMULA}"
         git push
@@ -103,6 +95,7 @@ runs:
       if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
       shell: bash
       env:
+        GH_TOKEN: ${{ github.token }}
         FORMULA: ${{ inputs.formula }}
       run: |
         set -euo pipefail
