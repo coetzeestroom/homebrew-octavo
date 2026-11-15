@@ -86,7 +86,6 @@ runs:
         set -euo pipefail
         json=$(ls ./*.bottle.json)
         brew bottle --merge --write --no-commit "$json"
-        cp "$(brew --repo coetzeestroom/octavo)/Formula/${FORMULA}.rb" "Formula/${FORMULA}.rb"
         git add "Formula/${FORMULA}.rb"
         git commit -m "Add bottle for ${FORMULA}"
 
