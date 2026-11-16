@@ -15,6 +15,33 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Prepare runner build space
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Disk space before cleanup:"
+        df -hT / /mnt
+
+        # These Pake builds need Rust, Node, Python and WebKitGTK, but not the
+        # preinstalled Android, .NET, Haskell or CodeQL toolchains. Removing
+        # them frees the root filesystem before Homebrew expands its bottles.
+        sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+          /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
+        docker image prune --all --force || true
+
+        # Homebrew uses /var/tmp on Linux by default. Its buildpath contains
+        # Pake's Cargo target and registry cache, so place it on the runner's
+        # separate temporary volume instead of the saturated root filesystem.
+        sudo mkdir -p /mnt/homebrew-tmp
+        sudo chown "$(id -u):$(id -g)" /mnt/homebrew-tmp
+        echo "HOMEBREW_TEMP=/mnt/homebrew-tmp" >> "$GITHUB_ENV"
+        echo "TMPDIR=/mnt/homebrew-tmp" >> "$GITHUB_ENV"
+
+        echo "Disk space after cleanup:"
+        df -hT / /mnt
+
     - name: Install system build deps
       shell: bash
       run: |
