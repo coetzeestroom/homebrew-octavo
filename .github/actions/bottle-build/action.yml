@@ -51,18 +51,57 @@ runs:
         set -euo pipefail
         json=$(ls ./*.bottle.json)
         filename=$(jq -r '.[].bottle.tags.x86_64_linux.filename' "$json")
+        sha256=$(jq -r '.[].bottle.tags.x86_64_linux.sha256' "$json")
+        assets_tsv="${RUNNER_TEMP:-/tmp}/bottle-assets.tsv"
 
-        if gh release view bottles >/dev/null 2>&1; then
-          if gh release view bottles --json assets --jq '.assets[].name' | grep -qx "$filename"; then
-            echo "Asset $filename already exists; skipping upload"
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+        if [[ -z "${sha256}" || "${sha256}" == "null" ]]; then
+          echo "Could not read the bottle checksum from ${json}" >&2
+          exit 1
         fi
-        echo "skip=false" >> "$GITHUB_OUTPUT"
+
+        # A published bottle is only usable when the release asset and the
+        # sha256 in the formula agree, so the two are gated separately rather
+        # than by a single "already done" flag. A run that uploaded the asset
+        # and then died before committing the block must still merge on a
+        # re-run; a run whose uploaded asset predates the current build must
+        # upload again, or the merged block would not match the tarball.
+        existing_digest=""
+        if gh release view bottles >/dev/null 2>&1; then
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/bottles" \
+            --jq '.assets[] | [.name, (.digest // "")] | @tsv' \
+            > "${assets_tsv}" 2>/dev/null || true
+          existing_digest=$(awk -F'\t' -v name="${filename}" '$1 == name { print $2 }' "${assets_tsv}")
+        fi
+
+        asset_ok=false
+        if [[ "${existing_digest}" == "sha256:${sha256}" ]]; then
+          asset_ok=true
+        else
+          echo "Release asset ${filename} is missing or differs from the built bottle"
+        fi
+
+        formula_ok=false
+        if grep -qF "${sha256}" "Formula/${FORMULA}.rb"; then
+          formula_ok=true
+        else
+          echo "Bottle ${sha256} is not in Formula/${FORMULA}.rb yet"
+        fi
+
+        # Only a complete pair is skipped. Merging a block whose tarball was not
+        # uploaded in this run would leave the formula pointing at an asset with
+        # a different checksum, so a missing half always redoes both.
+        skip_upload="${asset_ok}"
+        skip_merge=false
+        if [[ "${asset_ok}" == "true" && "${formula_ok}" == "true" ]]; then
+          skip_merge=true
+        fi
+
+        echo "skip_upload=${skip_upload} skip_merge=${skip_merge}"
+        echo "skip_upload=${skip_upload}" >> "$GITHUB_OUTPUT"
+        echo "skip_merge=${skip_merge}" >> "$GITHUB_OUTPUT"
 
     - name: Upload to release
-      if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
+      if: inputs.upload == 'true' && steps.idempotency.outputs.skip_upload != 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
@@ -80,17 +119,26 @@ runs:
         gh release upload bottles "$filename" --clobber
 
     - name: Merge bottle block into formula
-      if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
+      if: inputs.upload == 'true' && steps.idempotency.outputs.skip_merge != 'true'
       shell: bash
       env:
         FORMULA: ${{ inputs.formula }}
       run: |
         set -euo pipefail
+        if [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+          echo "Refusing to push a bottle commit from ${GITHUB_REF}; run this on main." >&2
+          exit 1
+        fi
+
         json=$(ls ./*.bottle.json)
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         brew bottle --merge --write --no-commit "$json"
         git add "Formula/${FORMULA}.rb"
+        if git diff --cached --quiet; then
+          echo "Formula ${FORMULA} already carries this bottle block"
+          exit 0
+        fi
         git commit -m "Add bottle for ${FORMULA}"
 
         # Several bottle workflows can finish at the same time, so a plain push
@@ -110,7 +158,7 @@ runs:
         done
 
     - name: Prune old assets (keep 3 versions)
-      if: inputs.upload == 'true' && steps.idempotency.outputs.skip != 'true'
+      if: inputs.upload == 'true'
       shell: bash
       env:
         GH_TOKEN: ${{ github.token }}
