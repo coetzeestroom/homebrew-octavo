@@ -10,6 +10,11 @@ on:
     paths:
       - Formula/omnirouter-desktop.rb
   workflow_dispatch:
+    inputs:
+      upload:
+        description: Upload the bottle to the bottles release and merge its block
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -26,6 +31,8 @@ jobs:
     steps:
       - name: Check out tap
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Homebrew
         id: set-up-homebrew
@@ -49,4 +56,4 @@ jobs:
         uses: ./.github/actions/bottle-build
         with:
           formula: omnirouter-desktop
-          upload: ${{ github.event_name == 'push' }}
+          upload: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.upload) }}

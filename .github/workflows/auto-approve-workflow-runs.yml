@@ -13,8 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Approve pending test workflow runs
+      - name: Approve pending autobump workflow runs
         uses: mheap/automatic-approve-action@851272ecb1e93d215b9ab3c16278d434a4fd775b # v1
         with:
           token: ${{ secrets.BREW_PAT }}
-          workflows: "tests.yml,autobump.yml"
+          workflows: >-
+            autobump.yml, bump-ccr-desktop.yml, bump-deepseek-harness-desktop.yml,
+            bump-herdr-desktop.yml, bump-hermes-webui-desktop.yml,
+            bump-hermes-workspace-desktop.yml, bump-omnirouter-desktop.yml,
+            bump-openwebui-desktop.yml
