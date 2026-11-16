@@ -138,13 +138,24 @@ class OpenwebuiDesktop < Formula
     ENV["PKG_CONFIG"] = system_pkg_config
     ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
     ENV["PKG_CONFIG_PATH"] = ""
-    check_system_dependencies!
 
+    # Pake otherwise writes Cargo's target directory into the read-only pake keg,
+    # and Cargo also needs a writable registry cache. Pointing CARGO_HOME at
+    # ~/.cargo fails on CI: the runner's .cargo belongs to root, so Cargo cannot
+    # create registry/cache there ("failed to create directory
+    # /home/runner/.cargo/registry/cache/...: Permission denied"). The build
+    # directory is always writable, so Cargo's state lives there instead.
     ENV["CARGO_TARGET_DIR"] = (buildpath/"pake-target").to_s
-    ENV.prepend_path "PATH", which("cargo").dirname.to_s
-    ENV["CARGO_HOME"] = "#{REAL_HOME}/.cargo"
+    ENV["CARGO_HOME"] = "#{buildpath}/.cargo"
+    # Homebrew rewrites HOME during the build, so pake's rustup lookup (which
+    # keys off ~/.cargo/bin) would otherwise miss the user's toolchain.
     ENV["RUSTUP_HOME"] = "#{REAL_HOME}/.rustup"
     ENV.prepend_path "PATH", "#{REAL_HOME}/.cargo/bin"
+
+    # The preflight runs after the PATH prepends so that a rustup-installed
+    # toolchain is found rather than reported as missing.
+    check_system_dependencies!
+    ENV.prepend_path "PATH", which("cargo").dirname.to_s
 
     # Create an isolated virtualenv and install Open WebUI into it.
     # Open WebUI 0.13.x requires Python >=3.11,<3.13, so pin python@3.12.
