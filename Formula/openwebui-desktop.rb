@@ -10,6 +10,11 @@ class OpenwebuiDesktop < Formula
     regex(/open_webui-(\d+(?:\.\d+)+)\.t/i)
   end
 
+  bottle do
+    root_url "https://github.com/coetzeestroom/homebrew-octavo/releases/download/bottles"
+    sha256 cellar: :any, x86_64_linux: "07a02ce4f71e3b9a0ff4cb683f8177ed7960632402a03150b07f534a313650ca"
+  end
+
   depends_on "pake" => :build
   depends_on "rust" => :build
   depends_on :linux
