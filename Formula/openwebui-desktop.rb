@@ -11,7 +11,7 @@ class OpenwebuiDesktop < Formula
   end
 
   bottle do
-    root_url "https://github.com/coetzeestroom/homebrew-octavo/releases/download/bottles"
+    root_url "https://ghcr.io/v2/coetzeestroom/octavo"
     sha256 cellar: :any, x86_64_linux: "07a02ce4f71e3b9a0ff4cb683f8177ed7960632402a03150b07f534a313650ca"
   end
 
@@ -289,6 +289,14 @@ class OpenwebuiDesktop < Formula
 
   def caveats
     <<~EOS
+      This private tap distributes bottles through GitHub Container Registry.
+      Before installing or upgrading, authenticate Homebrew with a classic
+      GitHub personal access token that has `read:packages` and access to this
+      repository:
+
+        export HOMEBREW_GITHUB_PACKAGES_USER=coetzeestroom
+        export HOMEBREW_GITHUB_PACKAGES_TOKEN=github_pat_or_ghp_token
+
       Start the desktop app (it runs Open WebUI on 127.0.0.1:#{WEB_PORT} and
       stops it again when the window closes):
 
