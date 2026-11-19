@@ -5,8 +5,8 @@
 # Usage: ./scripts/reduce-bottle-size.sh <extracted-bottle-dir>
 set -euo pipefail
 
-DIR="${1:?usage: $0 <extracted-bottle-dir>}"
-cd "$DIR"
+DIR="${1:?usage: ${0} <extracted-bottle-dir>}"
+cd "${DIR}"
 
 before=$(du -sb . | cut -f1)
 echo "Before: $(du -sh . | cut -f1)"
