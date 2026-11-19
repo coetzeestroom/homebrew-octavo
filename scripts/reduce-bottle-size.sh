@@ -16,11 +16,11 @@ find . -path '*/node_modules/*' \( \
   -name '*.d.ts' -o -name '*.d.ts.map' -o -name '*.map' \
   -o -name 'README.md' -o -name 'CHANGELOG.md' -o -name 'LICENSE*' \
   -o -name '*.test.js' -o -name '*.spec.js' \
-\) -type f -delete 2>/dev/null || true
+  \) -type f -delete 2>/dev/null || true
 
 # Remove empty directories left behind
 find . -path '*/node_modules/*' -type d -empty -delete 2>/dev/null || true
 
 after=$(du -sb . | cut -f1)
 echo "After:  $(du -sh . | cut -f1)"
-echo "Saved:  $(( (before - after) / 1024 / 1024 )) MB"
+echo "Saved:  $(((before - after) / 1024 / 1024)) MB"
