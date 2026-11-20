@@ -46,7 +46,7 @@ class CcrDesktop < Formula
 
     ENV["CARGO_TARGET_DIR"] = (buildpath/"pake-target").to_s
     ENV.prepend_path "PATH", which("cargo").dirname.to_s
-    ENV["CARGO_HOME"] = "#{REAL_HOME}/.cargo"
+    ENV["CARGO_HOME"] = "#{buildpath}/.cargo"
     ENV["RUSTUP_HOME"] = "#{REAL_HOME}/.rustup"
     ENV.prepend_path "PATH", "#{REAL_HOME}/.cargo/bin"
 
