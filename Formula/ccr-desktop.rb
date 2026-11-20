@@ -33,20 +33,16 @@ class CcrDesktop < Formula
     File.read("/etc/os-release").scan(/^(?:ID|ID_LIKE)=["']?([^"'\n]+)["']?$/).flatten.flat_map(&:split)
   end
 
-  def check_system_dependencies!
+  def install
+    ENV["PKG_CONFIG"] = system_pkg_config
+    ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+    ENV["PKG_CONFIG_PATH"] = ""
     odie "pkg-config not found." if system_pkg_config.nil?
     missing = %w[gtk+-3.0 javascriptcoregtk-4.1 libsoup-3.0 librsvg-2.0 openssl webkit2gtk-4.1].reject do |m|
       quiet_system(system_pkg_config, "--exists", m)
     end
     odie "Missing pkg-config modules: #{missing.join(", ")}" unless missing.empty?
     odie "Rust toolchain not found." if which("cargo").nil? || which("rustc").nil?
-  end
-
-  def install
-    ENV["PKG_CONFIG"] = system_pkg_config
-    ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
-    ENV["PKG_CONFIG_PATH"] = ""
-    check_system_dependencies!
 
     ENV["CARGO_TARGET_DIR"] = (buildpath/"pake-target").to_s
     ENV.prepend_path "PATH", which("cargo").dirname.to_s

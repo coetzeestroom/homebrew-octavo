@@ -39,7 +39,10 @@ class OmnirouterDesktop < Formula
     "Install WebKitGTK 4.1, GTK 3, librsvg, OpenSSL, xdotool and pkg-config dev packages."
   end
 
-  def check_system_dependencies!
+  def install
+    ENV["PKG_CONFIG"] = system_pkg_config
+    ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
+    ENV["PKG_CONFIG_PATH"] = ""
     if system_pkg_config.nil?
       odie "pkg-config not found. #{system_packages_help}"
     end
@@ -52,13 +55,6 @@ class OmnirouterDesktop < Formula
     if which("cargo").nil? || which("rustc").nil?
       odie "Rust toolchain not found. Install Rust #{RUST_MIN_VERSION}+."
     end
-  end
-
-  def install
-    ENV["PKG_CONFIG"] = system_pkg_config
-    ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
-    ENV["PKG_CONFIG_PATH"] = ""
-    check_system_dependencies!
 
     ENV["CARGO_TARGET_DIR"] = (buildpath/"pake-target").to_s
     ENV.prepend_path "PATH", which("cargo").dirname.to_s

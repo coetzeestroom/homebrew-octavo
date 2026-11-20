@@ -37,17 +37,6 @@ class HermesWorkspaceDesktop < Formula
     File.read("/etc/os-release").scan(/^(?:ID|ID_LIKE)=["']?([^"'\n]+)["']?$/).flatten.flat_map(&:split)
   end
 
-  def check_system_dependencies!
-    odie "pkg-config not found." if system_pkg_config.nil?
-    missing = %w[gtk+-3.0 javascriptcoregtk-4.1 libsoup-3.0 librsvg-2.0 openssl webkit2gtk-4.1].reject do |m|
-      quiet_system(system_pkg_config, "--exists", m)
-    end
-    odie "Missing pkg-config modules: #{missing.join(", ")}" unless missing.empty?
-    if which("cargo").nil? || which("rustc").nil?
-      odie "Rust toolchain not found (Pake needs Rust #{RUST_MIN_VERSION} or newer)."
-    end
-  end
-
   def install
     # Pake links against the host's WebKitGTK/GTK stack, so the system libraries
     # are checked here instead of being declared as (unbottlable) dependencies.
@@ -63,7 +52,14 @@ class HermesWorkspaceDesktop < Formula
     ENV["RUSTUP_HOME"] = "#{REAL_HOME}/.rustup"
     ENV.prepend_path "PATH", "#{REAL_HOME}/.cargo/bin"
 
-    check_system_dependencies!
+    odie "pkg-config not found." if system_pkg_config.nil?
+    missing = %w[gtk+-3.0 javascriptcoregtk-4.1 libsoup-3.0 librsvg-2.0 openssl webkit2gtk-4.1].reject do |m|
+      quiet_system(system_pkg_config, "--exists", m)
+    end
+    odie "Missing pkg-config modules: #{missing.join(", ")}" unless missing.empty?
+    if which("cargo").nil? || which("rustc").nil?
+      odie "Rust toolchain not found (Pake needs Rust #{RUST_MIN_VERSION} or newer)."
+    end
     ENV.prepend_path "PATH", which("cargo").dirname.to_s
 
     # The lockfile pins build scripts for esbuild and the native resolver, and
