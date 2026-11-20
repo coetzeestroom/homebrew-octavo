@@ -12,31 +12,67 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Check that all PR checks are green
+      - name: Merge pull requests with passing checks
         env:
           GH_TOKEN: ${{ secrets.BREW_PAT }}
         run: |
           set -euo pipefail
-          bad=0
+
+          prs="$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
+            --jq '.[] | [.number, .title] | @tsv')" || {
+            echo "::error::Unable to list open pull requests; refusing to merge."
+            exit 1
+          }
+
+          blocked=0
+          ready_prs=()
           while IFS=$'\t' read -r number title; do
             [[ -z "${number}" ]] && continue
-            # Fail if any check run is in a failing state.
-            if gh pr checks "${number}" --repo "$GITHUB_REPOSITORY" 2>/dev/null \
-                | grep -E 'fail|cancelled|timed_out|action_required' >/dev/null; then
-              echo "PR #${number} (${title}) has failing checks; skipping automerge." >&2
-              bad=1
+
+            pr="$(gh pr view "${number}" --repo "$GITHUB_REPOSITORY" \
+              --json headRefOid,statusCheckRollup)" || {
+              echo "::error::Unable to inspect PR #${number}; refusing to merge any PR."
+              exit 1
+            }
+
+            head_sha="$(jq -er '.headRefOid' <<<"${pr}")" || {
+              echo "::error::Unable to read the head commit for PR #${number}; refusing to merge any PR."
+              exit 1
+            }
+
+            # Accept only terminal, successful checks for this exact PR head.
+            if ! jq -e '
+              .statusCheckRollup as $checks
+              | ($checks | type == "array")
+              and ($checks | length > 0)
+              and ($checks | all(.[];
+                if .__typename == "CheckRun" then
+                  .status == "COMPLETED"
+                  and (.conclusion == "SUCCESS" or .conclusion == "NEUTRAL" or .conclusion == "SKIPPED")
+                elif .__typename == "StatusContext" then
+                  .state == "SUCCESS"
+                else
+                  false
+                end
+              ))
+            ' <<<"${pr}" >/dev/null; then
+              echo "PR #${number} (${title}) has missing, pending, cancelled, or failing checks."
+              blocked=1
+              continue
             fi
-          done < <(gh pr list --repo "$GITHUB_REPOSITORY" --state open --json number,title \
-            --jq '.[] | [.number, .title] | @tsv')
-          if [[ "${bad}" == "1" ]]; then
-            echo "Automerge skipped: at least one open PR has failing checks."
+
+            ready_prs+=("${number}"$'\t'"${head_sha}")
+          done <<<"${prs}"
+
+          if [[ "${blocked}" == "1" ]]; then
+            echo "Automerge skipped: at least one open PR does not have fully passing checks."
             exit 0
           fi
 
-      - name: Merge eligible pull requests
-        uses: pascalgn/automerge-action@7961b8b5eec56cc088c140b56d864285eabd3f67 # v0.16.4
-        env:
-          GITHUB_TOKEN: ${{ secrets.BREW_PAT }}
-          MERGE_LABELS: ""
-          MERGE_METHOD: "squash"
-          MERGE_READY_STATE: "clean"
+          for ready_pr in "${ready_prs[@]}"; do
+            IFS=$'\t' read -r number head_sha <<<"${ready_pr}"
+            if ! gh pr merge "${number}" --repo "$GITHUB_REPOSITORY" --squash \
+              --match-head-commit "${head_sha}"; then
+              echo "::warning::PR #${number} was not merged; its head or merge state changed."
+            fi
+          done
