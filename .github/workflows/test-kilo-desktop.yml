@@ -1,0 +1,56 @@
+name: test kilo-desktop
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Formula/kilo-desktop.rb
+  pull_request:
+    paths:
+      - Formula/kilo-desktop.rb
+  workflow_dispatch:
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tap
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trust the tap
+        run: brew trust coetzeestroom/octavo
+
+      - name: Style check
+        run: brew style coetzeestroom/octavo/kilo-desktop
+
+      - name: New-formula audit
+        run: brew audit --new coetzeestroom/octavo/kilo-desktop
+
+      - name: Livecheck
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: brew livecheck coetzeestroom/octavo/kilo-desktop
+
+      # The .deb is repackaged in `install`, so there is no bottle to build.
+      - name: Install from source
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install --build-from-source coetzeestroom/octavo/kilo-desktop
+
+      - name: Run formula tests
+        run: brew test coetzeestroom/octavo/kilo-desktop

@@ -41,6 +41,33 @@ These formulae compile a standalone Pake (Tauri/WebKitGTK) window around a local
 | `hermes-workspace-desktop` | Hermes Workspace | 64770 | `server-entry.js` from [outsourc-e/hermes-workspace](https://github.com/outsourc-e/hermes-workspace) (bundled SSR server) |
 | `deepseek-harness-desktop` | DeepSeek Harness | 64710/64711 | `dsh web` (npm) |
 
+## Desktop apps (prebuilt packages)
+
+These formulae repackage an upstream installer or release archive instead of compiling a window.
+
+| Formula | Description | Upstream | Notes |
+|---|---|---|---|
+| `kilo-desktop` | Kilo AI coding agent and data science desktop app | [Kilo-Org/kilo-desktop](https://github.com/Kilo-Org/kilo-desktop) | Official amd64 `.deb`, repackaged; Electron with host GTK libraries; tracks stable releases only |
+
+### Installing and running Kilo Desktop
+
+```bash
+brew tap coetzeer/homebrew-octavo
+brew trust coetzeer/octavo                 # brew 6+, once per tap
+
+brew install kilo-desktop
+kilo-desktop                               # or choose "Kilo" in the app menu
+
+brew info kilo-desktop                     # caveats, version and paths
+brew upgrade kilo-desktop                  # pick up new stable releases
+brew uninstall kilo-desktop
+```
+
+- The first install downloads roughly 314 MB and uses about 1.5 GB in the keg; there is no bottle, so `brew upgrade` downloads the new `.deb` again.
+- The launcher adds `--no-sandbox` because Homebrew cannot install Electron's SUID sandbox helper with root ownership.
+- If the menu entry remains after uninstalling, remove it with
+  `rm -f ~/.local/share/applications/kilo-desktop.desktop`.
+
 ### Testing a formula locally
 
 ```bash
@@ -64,5 +91,6 @@ brew uninstall coetzeer/octavo/<formula>
 
 Notes:
 - Pake formulae need the host WebKitGTK/GTK and Rust toolchain installed first (see `AGENTS.md` → "deepseek-harness-desktop").
+- `kilo-desktop` needs no build toolchain: it unpacks the upstream `.deb` and installs the Electron app, using the host GTK/NSS/libsecret libraries. Expect a ~314 MB download and a ~1.5 GB keg.
 - `openwebui-desktop` pulls a large Python venv; first install takes a while.
 - Ports are fixed; avoid running two desktop apps that share a port (e.g. omnirouter 8080 vs openwebui 8081 are distinct).
