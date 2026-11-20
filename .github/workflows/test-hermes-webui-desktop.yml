@@ -10,11 +10,6 @@ on:
     paths:
       - Formula/hermes-webui-desktop.rb
   workflow_dispatch:
-    inputs:
-      upload:
-        description: Upload the bottle to the bottles release and merge its block
-        type: boolean
-        default: true
 
 permissions: {}
 
@@ -23,12 +18,8 @@ defaults:
     shell: bash -xeuo pipefail {0}
 
 jobs:
-  test-and-bottle:
+  test-and-build:
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: read
     steps:
       - name: Check out tap
         uses: actions/checkout@v4
@@ -53,8 +44,7 @@ jobs:
       - name: Livecheck
         run: brew livecheck coetzeestroom/octavo/hermes-webui-desktop
 
-      - name: Bottle build
-        uses: ./.github/actions/bottle-build
+      - name: Build from source
+        uses: ./.github/actions/pake-build
         with:
           formula: hermes-webui-desktop
-          upload: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.upload) }}

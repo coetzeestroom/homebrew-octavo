@@ -73,7 +73,7 @@ class HermesWebuiDesktop < Formula
     ENV.prepend_path "PATH", which("cargo").dirname.to_s
 
     # Only the files the server actually loads are installed; docs, tests,
-    # container files and Nix expressions are left out of the bottle.
+    # Container files and Nix expressions are left out of the installed payload.
     libexec.install "server.py", "api", "static", "scripts", "bootstrap.py",
                     "managed_agent_startup.py", "mcp_server.py", "pyproject.toml",
                     "requirements.txt", "LICENSE", "README.md"

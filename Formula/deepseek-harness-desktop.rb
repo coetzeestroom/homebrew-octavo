@@ -168,7 +168,7 @@ class DeepseekHarnessDesktop < Formula
     system "npm", "install", *std_npm_args
     bin.install_symlink libexec/"bin/dsh"
 
-    # Trim non-runtime files from the npm tree to keep the bottle small:
+    # Trim non-runtime files from the npm tree to keep the installed payload small:
     # TypeScript declarations, source maps and per-package docs are not needed
     # at run time. LICENSE files are intentionally kept for compliance.
     system "find", (libexec/"lib/node_modules").to_s, "-type", "f",

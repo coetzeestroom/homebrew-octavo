@@ -1,0 +1,53 @@
+name: Local Pake build
+description: Build and test a Pake desktop formula from source
+inputs:
+  formula:
+    description: Formula name (e.g. deepseek-harness-desktop)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare runner build space
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Disk space before cleanup:"
+        df -hT / /mnt
+
+        # These Pake builds need Rust, Node, Python and WebKitGTK, but not the
+        # preinstalled Android, .NET, Haskell or CodeQL toolchains. Removing
+        # them frees the root filesystem before Homebrew expands its builds.
+        sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+          /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+        sudo apt-get clean
+        sudo rm -rf /var/lib/apt/lists/*
+        docker image prune --all --force || true
+
+        # Homebrew uses /var/tmp on Linux by default. Pake's Cargo target and
+        # registry cache are large, so place them on the runner's separate
+        # temporary volume instead of the saturated root filesystem.
+        sudo mkdir -p /mnt/homebrew-tmp
+        sudo chown "$(id -u):$(id -g)" /mnt/homebrew-tmp
+        echo "HOMEBREW_TEMP=/mnt/homebrew-tmp" >> "$GITHUB_ENV"
+        echo "TMPDIR=/mnt/homebrew-tmp" >> "$GITHUB_ENV"
+
+        echo "Disk space after cleanup:"
+        df -hT / /mnt
+
+    - name: Install system build deps
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends \
+          build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev \
+          libayatana-appindicator3-dev librsvg2-dev libxdo-dev rustc cargo
+        sudo mkdir -p "$HOME/.cargo"
+        sudo chown -R "$(id -u):$(id -g)" "$HOME/.cargo"
+
+    - name: Install formula from source
+      shell: bash
+      run: HOMEBREW_NO_AUTO_UPDATE=1 brew install --build-from-source coetzeestroom/octavo/${{ inputs.formula }}
+
+    - name: Run formula tests
+      shell: bash
+      run: brew test coetzeestroom/octavo/${{ inputs.formula }}

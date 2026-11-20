@@ -87,7 +87,7 @@ Lifecycle details worth remembering:
 - **`--multi-window`, `--no-restore-last-url`** keep the window pointing at the redirect sidecar instead of restoring a stale URL.
 - The desktop entry is linked into `~/.local/share/applications` via `post_install_steps` (`mkdir_p` + `symlink`) because Homebrew 7 rejects the legacy `post_install` method.
 
-**System build prerequisites are deliberately not Homebrew dependencies.** Tauri links against the host's WebKitGTK/GTK stack, and bottling 2 GB of WebKit into the tap is undesirable. Homebrew's `rust` keg also drags in LLVM, so Rust is treated the same way. `check_system_dependencies!` runs first in `install`, checks `REQUIRED_PKG_CONFIG_MODULES` (`gtk+-3.0`, `javascriptcoregtk-4.1`, `libsoup-3.0`, `librsvg-2.0`, `openssl`, `webkit2gtk-4.1`) with the host `/usr/bin/pkg-config`, checks for `cargo`/`rustc` >= `RUST_MIN_VERSION` (1.77), and `odie`s with the commands for `/etc/os-release`:
+**System build prerequisites are deliberately not Homebrew dependencies.** Tauri links against the host's WebKitGTK/GTK stack, and bundling 2 GB of WebKit into the tap is undesirable. Homebrew's `rust` keg also drags in LLVM, so Rust is treated the same way. `check_system_dependencies!` runs first in `install`, checks `REQUIRED_PKG_CONFIG_MODULES` (`gtk+-3.0`, `javascriptcoregtk-4.1`, `libsoup-3.0`, `librsvg-2.0`, `openssl`, `webkit2gtk-4.1`) with the host `/usr/bin/pkg-config`, checks for `cargo`/`rustc` >= `RUST_MIN_VERSION` (1.77), and `odie`s with the commands for `/etc/os-release`:
 
 ```sh
 # Arch / CachyOS / EndeavourOS / Manjaro
@@ -109,10 +109,10 @@ Those libraries are needed at run time too, so they must not be removed after th
 
 Wraps `nesquena/hermes-webui`, a dependency-light Python server (`server.py` + `api/` + `static/`) with no build step:
 
-1. Only the runtime files are installed into `libexec`; docs, tests, container files and Nix expressions stay out of the bottle.
+1. Only the runtime files are installed into `libexec`; docs, tests, container files and Nix expressions stay out of the installed payload.
 2. `virtualenv_create(libexec/".venv", "python@3.13")` plus the `pyyaml` resource provide the only hard dependency. The venv is named `.venv` on purpose: `api/config.py` resolves `REPO_ROOT/.venv` when it looks for a Python interpreter.
 3. `pake http://127.0.0.1:64740/ ...` compiles the window, and `bin/hermes-webui-desktop` starts `server.py`, waits for the port, launches the window, and kills the server when the window closes.
-4. `test do` boots `server.py` on a free port and asserts `GET /health` returns 200, so CI exercises the real payload before the bottle is built.
+4. `test do` boots `server.py` on a free port and asserts `GET /health` returns 200, so CI exercises the real payload after the source build.
 
 Notes:
 
@@ -165,12 +165,12 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 
 ## CI/CD
 
-- **test-*.yml (test-bot)**: `test-oh-my-*.yml`, `test-ccr-service.yml`, `test-hermes-dashboard.yml` and `test-aoe-dashboard.yml` run `brew test-bot` on `macos-26` and `ubuntu-latest` (inside the Homebrew container) to cover tap syntax and formula installation. There is no longer a single `tests.yml`; the bottle-building desktop formulae use their own workflows instead.
-- **test-*-desktop.yml**: One workflow per desktop formula, driven by the composite action in `.github/actions/bottle-build/action.yml`. It installs the host build deps, runs `brew install --build-bottle`, `brew test` (early validation), builds the bottle, then uses Homebrew's `brew pr-upload` to publish OCI bottle layers and manifests to GitHub Container Registry at `ghcr.io/v2/coetzeestroom/octavo`. These workflows need `packages: write` as well as `contents: write`; `skopeo` is installed for the registry upload. The bottle gate opens on a push to `main` and on a manual `workflow_dispatch` with `upload: true` (the default); pull requests build only, and a run from any ref other than `refs/heads/main` refuses to push the bottle commit. `pr-upload` updates the bottle block before the existing guarded commit-and-retry step pushes it. Runs on `ubuntu-24.04` (no container), because `actions/checkout` cannot write to the Homebrew container's `/__w` temp dir.
+- **test-*.yml (test-bot)**: `test-oh-my-*.yml`, `test-ccr-service.yml`, `test-hermes-dashboard.yml` and `test-aoe-dashboard.yml` run `brew test-bot` on `macos-26` and `ubuntu-latest` (inside the Homebrew container) to cover tap syntax and formula installation. There is no longer a single `tests.yml`; the Pake desktop formulae use separate source-build workflows.
+- **test-*-desktop.yml**: One workflow per Pake desktop formula, driven by the composite action in `.github/actions/pake-build/action.yml`. It installs the host build deps, runs `brew install --build-from-source`, and runs `brew test`. These workflows have no registry credentials, artifact upload, formula mutation, or write permissions. Runs on `ubuntu-24.04` (no container), because `actions/checkout` cannot write to the Homebrew container's `/__w` temp dir.
 - **autobump.yml**: Scheduled daily at 14:10 UTC. Runs `brew bump --no-fork --open-pr` to auto-update formulae. Only triggers on PR merge to `main` or schedule.
 - **bump-deepseek-harness-desktop.yml**: Scheduled daily at 15:10 UTC (plus `workflow_dispatch` and pushes touching its own file). Reads the npm `latest` tag for `@deepseek-ai/dsh`, compares it with the version pinned in the formula, then runs `brew bump-formula-pr --write-only --url=... --version=... --no-audit` on branch `bump-deepseek-harness-desktop-<version>` and opens the PR with `gh`. It skips when a PR for that branch already exists.
-- **dependabot.yml**: Weekly updates for GitHub Actions. Pinned to `@v6.1.0` for cache, `@v7.0.1` for upload-artifact.
-- **publish.yml**: Removed (kept in `.github/removed/` for reference). Not active.
+- **dependabot.yml**: Weekly updates for GitHub Actions, grouped into one update stream.
+- **publish.yml**: Removed; this tap no longer publishes build artifacts.
 
 ## Shell config
 

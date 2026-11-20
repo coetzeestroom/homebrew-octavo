@@ -21,7 +21,7 @@ class HermesWorkspaceDesktop < Formula
   WEB_PORT = 64770
   APP_NAME = "Hermes Workspace".freeze
 
-  # The SSR server is bundled with esbuild so the bottle does not have to ship
+  # The SSR server is bundled with esbuild so the installed app does not ship
   # ~1 GB of node_modules; CJS dependencies still call `require` for Node
   # builtins, which ESM output needs a real `require` for.
   ESBUILD_BANNER = "import { createRequire as __cr } from 'node:module'; " \
