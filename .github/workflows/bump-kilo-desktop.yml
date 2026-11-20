@@ -1,0 +1,114 @@
+name: bump kilo-desktop
+
+# Kilo Desktop publishes frequent `-preview-` prereleases and occasional
+# stable releases. The formula tracks stable only, so this workflow reads the
+# repository's `latest` release (which excludes prereleases) instead of every
+# tag, then selects the amd64 .deb asset.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/bump-kilo-desktop.yml
+  schedule:
+    # Every day at 16:50 UTC, after the other desktop bump workflows.
+    - cron: 50 16 * * *
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+
+      - name: Set up git
+        id: git_setup
+        uses: Homebrew/actions/git-user-config@63a2d4d8d4193eab3e62b1b782ff3ab8408f5b29 # 2026.11.09.1
+
+      - name: Bump to the latest stable Kilo Desktop release
+        env:
+          FORMULA: kilo-desktop
+          GH_TOKEN: ${{ github.token }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
+        run: |
+          formula_file="Formula/$FORMULA.rb"
+
+          release_json="$(gh api "repos/Kilo-Org/kilo-desktop/releases/latest")"
+
+          if [[ "$(jq --raw-output '.prerelease' <<<"$release_json")" == "true" ]]; then
+            echo "The latest Kilo Desktop release is a prerelease; skipping."
+            exit 0
+          fi
+
+          asset_url="$(jq --raw-output \
+            '[.assets[] | select(.name | test("^kilo-desktop_.*_amd64\\.deb$"))][0].browser_download_url // empty' \
+            <<<"$release_json")"
+          if [[ -z "$asset_url" ]]; then
+            echo "No amd64 .deb asset in the latest Kilo Desktop release." >&2
+            exit 1
+          fi
+
+          latest_version="${asset_url##*/}"
+          latest_version="${latest_version#kilo-desktop_}"
+          latest_version="${latest_version%_amd64.deb}"
+          if [[ ! "$latest_version" =~ ^[0-9][0-9A-Za-z.+~-]*$ ]]; then
+            echo "Unexpected Kilo Desktop version: $latest_version" >&2
+            exit 1
+          fi
+
+          current_version="$(sed -nE \
+            's|.*/kilo-desktop_([^/_]+)_amd64\.deb.*|\1|p' "$formula_file")"
+          if [[ -z "$current_version" ]]; then
+            echo "Unable to read the pinned version from $formula_file" >&2
+            exit 1
+          fi
+
+          if [[ "$current_version" == "$latest_version" ]]; then
+            echo "$FORMULA is already on Kilo Desktop $latest_version"
+            exit 0
+          fi
+
+          branch="bump-$FORMULA-$latest_version"
+          if [[ "$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" \
+            --state open --json number --limit 1 --jq 'length')" != "0" ]]; then
+            echo "A pull request already exists for $FORMULA $latest_version"
+            exit 0
+          fi
+
+          # No --version: the version is inferred from the new URL, and forcing
+          # it would add a `version` stanza that `brew audit` rejects as
+          # redundant.
+          brew bump-formula-pr "$TAP_NAME/$FORMULA" \
+            --write-only \
+            --url="$asset_url" \
+            --no-audit
+
+          git switch --create "$branch"
+          git add "$formula_file"
+          git commit --message="Update $FORMULA to $latest_version"
+          gh auth setup-git
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$branch" \
+            --title="$FORMULA $latest_version" \
+            --body="Created by the kilo-desktop autobump workflow.
+
+          \`Kilo-Org/kilo-desktop\` $current_version -> $latest_version
+          (stable GitHub release, amd64 .deb repackaged by the formula;
+          checksum recomputed by \`brew bump-formula-pr\`)."
