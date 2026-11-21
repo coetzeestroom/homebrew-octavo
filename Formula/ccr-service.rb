@@ -1,8 +1,8 @@
 class CcrService < Formula
   desc "Service wrapper for claude-code-router (ccr) - router gateway and web UI"
   homepage "https://github.com/musistudio/claude-code-router"
-  url "https://github.com/musistudio/claude-code-router/archive/refs/tags/v3.1.5.tar.gz"
-  sha256 "48ca2b30d26b1734ab80103e8a5c07a6ea051d07e1dfd621191dd6a90b37aab3"
+  url "https://github.com/musistudio/claude-code-router/archive/refs/tags/v3.1.6.tar.gz"
+  sha256 "ddfc7b235aaa7a6d48c2d1183ae14d1c4f91f264974d3f3498fc7d2265e9cb59"
   license "MIT"
   head "https://github.com/musistudio/claude-code-router.git", branch: "main"
 
