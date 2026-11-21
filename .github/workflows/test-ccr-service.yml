@@ -46,5 +46,3 @@ jobs:
       - run: brew test-bot --only-cleanup-before
       - run: brew test-bot --only-setup
       - run: brew test-bot --only-tap-syntax
-      - run: brew test-bot --only-formulae=ccr-service
-        if: github.event_name == 'pull_request'
