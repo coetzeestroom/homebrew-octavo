@@ -44,13 +44,13 @@ Notes:
 class MyWebapp < Formula
   desc "Isolated Pake desktop wrapper for MyWebApp"
   homepage "https://your-webapp-url.com"
-  url "https://registry.npmjs.org/@scope/pkg/-/pkg-1.2.3.tgz"   # or a GitHub archive
-  sha256 "..."
+  url "https://registry.npmjs.org/@scope/pkg/-/pkg-1.2.3.tgz" # or a GitHub archive
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
 
+  depends_on "pake" => :build
   depends_on :linux
   depends_on "node"
-  depends_on "pake" => :build
 
   # Ports sit above the Linux ephemeral range (32768-60999).
   WEB_PORT        = 64_710
@@ -66,6 +66,7 @@ class MyWebapp < Formula
 
   def os_release_ids
     return [] unless File.exist?("/etc/os-release")
+
     File.read("/etc/os-release")
         .scan(/^(?:ID|ID_LIKE)=["']?([^"'\n]+)["']?$/)
         .flatten.flat_map(&:split)
@@ -80,30 +81,23 @@ class MyWebapp < Formula
   def system_packages_help
     ids = os_release_ids
     if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
-      "sudo pacman -S --needed base-devel webkit2gtk-4.1 gtk3 librsvg libayatana-appindicator openssl xdotool curl wget file"
+      "sudo pacman -S --needed base-devel webkit2gtk-4.1 gtk3 librsvg " \
+        "libayatana-appindicator openssl xdotool curl wget file"
     elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
-      "sudo apt update && sudo apt install -y build-essential pkg-config libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev curl wget file"
+      "sudo apt update && sudo apt install -y build-essential pkg-config " \
+        "libwebkit2gtk-4.1-dev libssl-dev libayatana-appindicator3-dev " \
+        "librsvg2-dev libxdo-dev curl wget file"
     elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
-      "sudo dnf install -y webkit2gtk4.1-devel openssl-devel libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ make pkgconf-pkg-config curl wget file"
+      "sudo dnf install -y webkit2gtk4.1-devel openssl-devel " \
+        "libappindicator-gtk3-devel librsvg2-devel libxdo-devel gcc gcc-c++ " \
+        "make pkgconf-pkg-config curl wget file"
     elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
-      "sudo zypper install -y webkit2gtk4.1-devel libopenssl-devel libayatana-appindicator3-devel librsvg-devel libxdo-devel gcc gcc-c++ make pkg-config curl wget file"
+      "sudo zypper install -y webkit2gtk4.1-devel libopenssl-devel " \
+        "libayatana-appindicator3-devel librsvg-devel libxdo-devel gcc " \
+        "gcc-c++ make pkg-config curl wget file"
     else
-      "Install the WebKitGTK 4.1, GTK 3, librsvg, AppIndicator, OpenSSL, xdotool and pkg-config dev packages for your distro."
-    end
-  end
-
-  def rust_toolchain_help
-    ids = os_release_ids
-    if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
-      "sudo pacman -S --needed rust"
-    elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
-      "sudo apt update && sudo apt install -y rustc cargo"
-    elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
-      "sudo dnf install -y rust cargo"
-    elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
-      "sudo zypper install -y rust cargo"
-    else
-      "Install Rust #{RUST_MIN_VERSION}+ via https://rustup.rs"
+      "Install the WebKitGTK 4.1, GTK 3, librsvg, AppIndicator, " \
+        "OpenSSL, xdotool and pkg-config dev packages for your distro."
     end
   end
 
@@ -116,9 +110,22 @@ class MyWebapp < Formula
       problems << "Missing pkg-config modules: #{missing.join(", ")}\n  #{system_packages_help}" unless missing.empty?
     end
     if which("cargo").nil? || which("rustc").nil?
-      problems << "Rust toolchain (cargo/rustc) not found on PATH.\n  #{rust_toolchain_help}"
+      ids = os_release_ids
+      rust_help = if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
+        "sudo pacman -S --needed rust"
+      elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
+        "sudo apt update && sudo apt install -y rustc cargo"
+      elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
+        "sudo dnf install -y rust cargo"
+      elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
+        "sudo zypper install -y rust cargo"
+      else
+        "Install Rust #{RUST_MIN_VERSION}+ via https://rustup.rs"
+      end
+      problems << "Rust toolchain (cargo/rustc) not found on PATH.\n  #{rust_help}"
     end
     return if problems.empty?
+
     odie <<~EOS
       MyWebApp compiles a native WebKitGTK window and needs build tools Homebrew does not provide on Linux.
 
@@ -130,9 +137,9 @@ class MyWebapp < Formula
   def install
     # Homebrew's build superenv replaces the pkg-config search path with its own
     # prefix. Restore the host search path BEFORE the preflight and the compile.
-    ENV["PKG_CONFIG"]       = system_pkg_config
+    ENV["PKG_CONFIG"] = system_pkg_config
     ENV["PKG_CONFIG_LIBDIR"] = "/usr/lib/pkgconfig:/usr/share/pkgconfig:/usr/lib/x86_64-linux-gnu/pkgconfig"
-    ENV["PKG_CONFIG_PATH"]  = ""
+    ENV["PKG_CONFIG_PATH"] = ""
 
     check_system_dependencies!
 
@@ -245,7 +252,7 @@ class MyWebapp < Formula
             ".local/share/applications/my-webapp.desktop",
             source_base: :prefix,
             target_base: :home,
-            overwrite: true
+            overwrite:   true
   end
 
   def caveats
