@@ -10,11 +10,6 @@ class OpenwebuiDesktop < Formula
     regex(/open_webui-(\d+(?:\.\d+)+)\.t/i)
   end
 
-  bottle do
-    root_url "https://ghcr.io/v2/coetzeestroom/octavo"
-    sha256 cellar: :any, x86_64_linux: "07a02ce4f71e3b9a0ff4cb683f8177ed7960632402a03150b07f534a313650ca"
-  end
-
   depends_on "pake" => :build
   depends_on "rust" => :build
   depends_on :linux
@@ -79,22 +74,6 @@ class OpenwebuiDesktop < Formula
     end
   end
 
-  def rust_toolchain_help
-    ids = os_release_ids
-    if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
-      "sudo pacman -S --needed rust"
-    elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
-      "sudo apt update && sudo apt install -y rustc cargo"
-    elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
-      "sudo dnf install -y rust cargo"
-    elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
-      "sudo zypper install -y rust cargo"
-    else
-      "Install Rust #{RUST_MIN_VERSION} or newer, for example with " \
-        "https://rustup.rs (`rustup default stable`)."
-    end
-  end
-
   def check_system_dependencies!
     problems = []
 
@@ -119,11 +98,24 @@ class OpenwebuiDesktop < Formula
     end
 
     if which("cargo").nil? || which("rustc").nil?
+      ids = os_release_ids
+      rust_help = if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
+        "sudo pacman -S --needed rust"
+      elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
+        "sudo apt update && sudo apt install -y rustc cargo"
+      elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
+        "sudo dnf install -y rust cargo"
+      elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
+        "sudo zypper install -y rust cargo"
+      else
+        "Install Rust #{RUST_MIN_VERSION} or newer, for example with " \
+          "https://rustup.rs (`rustup default stable`)."
+      end
       problems << <<~EOS
         The Rust toolchain (cargo and rustc) was not found on PATH. Pake
         compiles a Tauri app, which needs Rust #{RUST_MIN_VERSION} or newer.
 
-          #{rust_toolchain_help}
+          #{rust_help}
       EOS
     end
 
@@ -289,14 +281,6 @@ class OpenwebuiDesktop < Formula
 
   def caveats
     <<~EOS
-      This private tap distributes bottles through GitHub Container Registry.
-      Before installing or upgrading, authenticate Homebrew with a classic
-      GitHub personal access token that has `read:packages` and access to this
-      repository:
-
-        export HOMEBREW_GITHUB_PACKAGES_USER=coetzeestroom
-        export HOMEBREW_GITHUB_PACKAGES_TOKEN=github_pat_or_ghp_token
-
       Start the desktop app (it runs Open WebUI on 127.0.0.1:#{WEB_PORT} and
       stops it again when the window closes):
 
