@@ -3,8 +3,8 @@ class HermesWebuiDesktop < Formula
 
   desc "Desktop window for the Hermes WebUI"
   homepage "https://github.com/nesquena/hermes-webui"
-  url "https://github.com/nesquena/hermes-webui/archive/refs/tags/v0.52.702.tar.gz"
-  sha256 "7150e5cbd34dc1e19481bff472c30366f78b6b1521ada9649df50e33fca4fa73"
+  url "https://github.com/nesquena/hermes-webui/archive/refs/tags/v0.52.724.tar.gz"
+  sha256 "aeb15d0896c1c64e79b53e19d677220fd86b670feb18004fb31d9f8c2c123abd"
   license "MIT"
 
   livecheck do
