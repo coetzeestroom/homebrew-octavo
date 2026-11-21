@@ -14,7 +14,7 @@ class AoeDashboard < Formula
   end
 
   service do
-    run [formula_opt_bin("aoe")/"aoe", "serve", "--host", "127.0.0.1", "--port", "8080"]
+    run [formula_opt_bin("aoe")/"aoe", "serve", "--host", "127.0.0.1", "--port", "8080", "--auth", "none"]
     run_type :immediate
     keep_alive true
     working_dir Dir.home
@@ -31,8 +31,8 @@ class AoeDashboard < Formula
         brew services stop aoe-dashboard
         brew services restart aoe-dashboard
 
-      The dashboard listens on http://127.0.0.1:8080. AoE uses token
-      authentication by default; run `aoe url` to print the authorized URL.
+      The dashboard listens on http://127.0.0.1:8080 and is configured
+      for passwordless access.
     EOS
   end
 
