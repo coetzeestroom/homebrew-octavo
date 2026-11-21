@@ -80,22 +80,6 @@ class DeepseekHarnessDesktop < Formula
     end
   end
 
-  def rust_toolchain_help
-    ids = os_release_ids
-    if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
-      "sudo pacman -S --needed rust"
-    elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
-      "sudo apt update && sudo apt install -y rustc cargo"
-    elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
-      "sudo dnf install -y rust cargo"
-    elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
-      "sudo zypper install -y rust cargo"
-    else
-      "Install Rust #{RUST_MIN_VERSION} or newer, for example with " \
-        "https://rustup.rs (`rustup default stable`)."
-    end
-  end
-
   def check_system_dependencies!
     problems = []
 
@@ -121,11 +105,24 @@ class DeepseekHarnessDesktop < Formula
 
     rustc = which("rustc")
     if which("cargo").nil? || rustc.nil?
+      ids = os_release_ids
+      rust_help = if ids.intersect?(%w[arch archarm cachyos endeavouros garuda manjaro])
+        "sudo pacman -S --needed rust"
+      elsif ids.intersect?(%w[debian ubuntu linuxmint pop raspbian])
+        "sudo apt update && sudo apt install -y rustc cargo"
+      elsif ids.intersect?(%w[fedora rhel centos rocky almalinux])
+        "sudo dnf install -y rust cargo"
+      elsif ids.intersect?(%w[opensuse opensuse-tumbleweed sles])
+        "sudo zypper install -y rust cargo"
+      else
+        "Install Rust #{RUST_MIN_VERSION} or newer, for example with " \
+          "https://rustup.rs (`rustup default stable`)."
+      end
       problems << <<~EOS
         The Rust toolchain (cargo and rustc) was not found on PATH. Pake
         compiles a Tauri app, which needs Rust #{RUST_MIN_VERSION} or newer.
 
-          #{rust_toolchain_help}
+          #{rust_help}
       EOS
     end
 
@@ -168,7 +165,7 @@ class DeepseekHarnessDesktop < Formula
     system "npm", "install", *std_npm_args
     bin.install_symlink libexec/"bin/dsh"
 
-    # Trim non-runtime files from the npm tree to keep the bottle small:
+    # Trim non-runtime files from the npm tree to keep the installed payload small:
     # TypeScript declarations, source maps and per-package docs are not needed
     # at run time. LICENSE files are intentionally kept for compliance.
     system "find", (libexec/"lib/node_modules").to_s, "-type", "f",
