@@ -1,8 +1,8 @@
 class HerdrDesktop < Formula
   desc "Desktop app for the Herdr web UI"
   homepage "https://github.com/alecuba16/herdr-webui"
-  url "https://github.com/alecuba16/herdr-webui/releases/download/v0.7.54/herdr-webui-linux-x86_64.tar.gz"
-  sha256 "aa17c7cc74a0e8bea9dce9dbc222cb21f789e4d5ae0a3a5f7293b755a6113635"
+  url "https://github.com/alecuba16/herdr-webui/releases/download/v0.7.56/herdr-webui-linux-x86_64.tar.gz"
+  sha256 "09e779c23935c3d5dd96973f15278dfb8a8396697ac1df07132e4df27e27d359"
   license "MIT"
 
   livecheck do
