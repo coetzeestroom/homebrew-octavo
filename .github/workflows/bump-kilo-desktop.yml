@@ -47,7 +47,12 @@ jobs:
         run: |
           formula_file="Formula/$FORMULA.rb"
 
-          release_json="$(gh api "repos/Kilo-Org/kilo-desktop/releases/latest")"
+          # Kilo's IP allow list rejects authenticated requests from GitHub-hosted
+          # runners. This public endpoint must not inherit GH_TOKEN; the token
+          # remains available below for pull-request discovery and publication.
+          release_json="$(curl --fail --silent --show-error --location \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/Kilo-Org/kilo-desktop/releases/latest")"
 
           if [[ "$(jq --raw-output '.prerelease' <<<"$release_json")" == "true" ]]; then
             echo "The latest Kilo Desktop release is a prerelease; skipping."
