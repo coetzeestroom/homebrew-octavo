@@ -17,8 +17,7 @@ Formula/
 ├── hermes-workspace-desktop.rb  # outsourc-e/hermes-workspace — Pake window around the TanStack Start SSR server; Linux only
 ├── ccr-desktop.rb  # STUB: desktop window for Claude Code Router web UI (to be completed)
 ├── omnirouter-desktop.rb  # STUB: desktop window for OmniRouter web UI (to be completed)
-├── herdr-desktop.rb  # STUB: desktop window for Herdr web UI (to be completed)
-└── openwebui-desktop.rb  # STUB: desktop window for Open WebUI (to be completed)
+└── herdr-desktop.rb  # STUB: desktop window for Herdr web UI (to be completed)
 ```
 
 ## Essential commands
@@ -179,7 +178,7 @@ When updating untagged formulae (oh-my-zsh, oh-my-bash), the commit hash used in
 - **`hermes-webui-desktop` only bundles PyYAML**: `resource "pyyaml"` is built from the PyPI sdist into `libexec/.venv`. Adding `cryptography` would require a full Rust/OpenSSL build at install time; password auth covers the gap.
 - **`hermes-workspace-desktop` needs `--allow-build` flags**: with pnpm 12 a bare `pnpm install --frozen-lockfile` fails on `ERR_PNPM_IGNORED_BUILDS`. Keep esbuild and `unrs-resolver` allowed and electron denied; `--ignore-scripts` does not silence the error.
 - **`hermes-workspace-desktop` bundles the SSR server with esbuild**: the ESM output needs the `--banner:js` `createRequire` shim, otherwise `react-dom` throws `Dynamic require of "util" is not supported`. Re-test `node server.mjs` after upgrading upstream.
-- **Desktop ports**: `deepseek-harness-desktop` 64710/64711, `ccr-desktop` 64720, `omnirouter-desktop` 64730, `hermes-webui-desktop` 64740, `herdr-desktop` 64750, `openwebui-desktop` 64760, `hermes-workspace-desktop` 64770 — all above the Linux ephemeral range.
+- **Desktop ports**: `deepseek-harness-desktop` 64710/64711, `ccr-desktop` 64720, `omnirouter-desktop` 64730, `hermes-webui-desktop` 64740, `herdr-desktop` 64750, `hermes-workspace-desktop` 64770 — all above the Linux ephemeral range.
 - **`deepseek-harness-desktop` launch failures**: On Wayland with proprietary NVIDIA drivers a blank window usually means DMA-BUF compositing failed; `DSH_DESKTOP_DISABLE_DMABUF=1` sets `WEBKIT_DISABLE_DMABUF_RENDERER=1`. A window that does not authenticate means the sidecar port `64711` is occupied by something else.
 - **`kilo-desktop` is a deb repack, not a Pake build**: `ar`/`xz` are build dependencies, and the launcher always passes `--no-sandbox` because the deb's `chrome-sandbox` is not setuid. Do not add a Pake/Rust build step or a bottle here; the installed keg is ~1.5 GB.
 - **`kilo-desktop` must not carry a `version` line**: Homebrew detects `1.0.0` from `kilo-desktop_1.0.0_amd64.deb`, and `brew audit` rejects an explicit version as redundant. The autobump workflow therefore omits `--version` so `bump-formula-pr` does not insert one.
