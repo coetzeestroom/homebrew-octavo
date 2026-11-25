@@ -37,7 +37,6 @@ These formulae compile a standalone Pake (Tauri/WebKitGTK) window around a local
 | `omnirouter-desktop` | OmniRouter | 64730 | `omnirouter` binary |
 | `hermes-webui-desktop` | Hermes WebUI | 64740 | `server.py` from [nesquena/hermes-webui](https://github.com/nesquena/hermes-webui) (Python venv) |
 | `herdr-desktop` | Herdr WebUI | 64750 | `herdr-webui --https off --backend-mode builtin` |
-| `openwebui-desktop` | Open WebUI | 64760 | `open-webui serve --port 64760` (pip venv) |
 | `hermes-workspace-desktop` | Hermes Workspace | 64770 | `server-entry.js` from [outsourc-e/hermes-workspace](https://github.com/outsourc-e/hermes-workspace) (bundled SSR server) |
 | `deepseek-harness-desktop` | DeepSeek Harness | 64710/64711 | `dsh web` (npm) |
 
@@ -92,5 +91,4 @@ brew uninstall coetzeer/octavo/<formula>
 Notes:
 - Pake formulae need the host WebKitGTK/GTK and Rust toolchain installed first (see `AGENTS.md` → "deepseek-harness-desktop").
 - `kilo-desktop` needs no build toolchain: it unpacks the upstream `.deb` and installs the Electron app, using the host GTK/NSS/libsecret libraries. Expect a ~314 MB download and a ~1.5 GB keg.
-- `openwebui-desktop` pulls a large Python venv; first install takes a while.
-- Ports are fixed; avoid running two desktop apps that share a port (e.g. omnirouter 8080 vs openwebui 8081 are distinct).
+- Ports are fixed; avoid running two desktop apps that share a port.
